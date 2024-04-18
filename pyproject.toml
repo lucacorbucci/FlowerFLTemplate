@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "fltemplate"
+version = "0.1.0"
+description = "A simple template to quickly start experiments using Federated Learning"
+authors = ["lucacorbucci <corbuccilu@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+flwr = "^1.8.0"
+torch = "^2.2.2"
+torchvision = "^0.17.2"
+pandas = "^2.2.2"
+numpy = "^1.26.4"
+scikit-learn = "^1.4.2"
+ruff = "^0.3.7"
+
+
+[tool.poetry.group.dev.dependencies]
+ipykernel = "^6.29.4"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
