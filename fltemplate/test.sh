@@ -1,0 +1,3 @@
+poetry run python main.py --dataset_name adult --dataset_path ../data/adult/ --epochs 1 --batch_size 64 --lr 0.001 --seed 0 --optimizer adam --tabular True --num_nodes 20 --split_approach iid --lr 0.1
+poetry run python main.py --dataset_name adult --dataset_path ../data/adult/ --epochs 1 --batch_size 64 --lr 0.001 --seed 0 --optimizer adam --tabular True --num_nodes 20 --split_approach non_iid --lr 0.1 --alpha_dirichlet 0.5
+poetry run python main.py --dataset_name adult --dataset_path ../data/adult/ --epochs 1 --batch_size 64 --lr 0.001 --seed 0 --optimizer adam --tabular True --num_nodes 20 --split_approach representative_diversity --lr 0.1 --ratio_unfair_nodes 0.3 --group_to_reduce 0.0 1  --group_to_increment 1.0 1 --ratio_unfairness 0.1 0.2
