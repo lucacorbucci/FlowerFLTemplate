@@ -169,7 +169,9 @@ class FederatedDataset:
                 )
 
         elif preferences.split_approach == "representative_diversity":
-            number_unfair_nodes = int(preferences.num_nodes * preferences.ratio_unfair_nodes)
+            number_unfair_nodes = int(
+                preferences.num_nodes * preferences.ratio_unfair_nodes
+            )
             number_fair_nodes = preferences.num_nodes - number_unfair_nodes
             nodes, remaining_data = FederatedDataset.representative_diversity_approach(
                 X, y, z, preferences.num_nodes
@@ -179,8 +181,8 @@ class FederatedDataset:
             labels_and_sensitive = list(zip(labels, sensitive_features))
 
             fair_nodes, unfair_nodes = FederatedDataset.create_unfair_nodes(
-                fair_nodes=nodes[: number_fair_nodes],
-                nodes_to_unfair=nodes[number_fair_nodes :],
+                fair_nodes=nodes[:number_fair_nodes],
+                nodes_to_unfair=nodes[number_fair_nodes:],
                 remaining_data=remaining_data,
                 group_to_reduce=preferences.group_to_reduce,
                 group_to_increment=preferences.group_to_increment,
@@ -188,7 +190,7 @@ class FederatedDataset:
                 # combination=labels_and_sensitive,
             )
             client_data = fair_nodes + unfair_nodes
-            
+
             # transform client data so that they are compatiblw with the
             # other functions
             tmp_data = []
@@ -208,9 +210,7 @@ class FederatedDataset:
             # remove the old files in the data folder
             if split_name == "train":
                 os.system(f"rm -rf {preferences.dataset_path}/federated/*")
-            for client_name, client in enumerate(
-                client_data
-            ):
+            for client_name, client in enumerate(client_data):
                 # Append 1 to each samples
                 print(client_name)
                 custom_dataset = TabularDataset(
@@ -224,7 +224,9 @@ class FederatedDataset:
                 if not os.path.exists(
                     f"{preferences.dataset_path}/federated/{client_name}"
                 ):
-                    os.system(f"mkdir {preferences.dataset_path}/federated/{client_name}")
+                    os.system(
+                        f"mkdir {preferences.dataset_path}/federated/{client_name}"
+                    )
                 # store the dataset in the client folder with the name "train.pt"
                 torch.save(
                     custom_dataset,
@@ -364,7 +366,7 @@ class FederatedDataset:
                 if sum(number_of_samples_to_add) > 0:
                     assert samples_to_remove == 0, "Not enough samples to remove"
             # assert sum(number_of_samples_to_add) <= len(
-                # remaining_data[group_to_increment]
+            # remaining_data[group_to_increment]
             # ), "Too many samples to add"
             # now we have to add the same amount of data taken from group_to_unfair
             for node, samples_to_add in zip(unfair_nodes, number_of_samples_to_add):
