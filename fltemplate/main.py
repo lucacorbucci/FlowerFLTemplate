@@ -17,11 +17,13 @@ from Utils.preferences import Preferences
 from Utils.utils import Utils
 
 from fltemplate.Client.client import FlowerClient
+from fltemplate.ClientManager.client_manager import SimpleClientManager
+from fltemplate.Server.server import Server
 from fltemplate.Strategy.fed_avg import FedAvg
 
 
 def signal_handler(sig, frame):
-    print("You pressed Ctrl+C!")
+    print("Gracefully stopping your experiment! Keep calm!")
     global wandb_run
     if wandb_run:
         wandb_run.finish()
@@ -42,29 +44,44 @@ parser.add_argument("--num_nodes", type=int, default=None)
 parser.add_argument("--split_approach", type=str, default=None)
 parser.add_argument("--lr", type=float, default=None)
 parser.add_argument("--seed", type=int, default=None)
+parser.add_argument("--node_shuffle_seed", type=int, default=None)
+
 parser.add_argument("--alpha_dirichlet", type=float, default=None)
-parser.add_argument("--ratio_unfair_nodes", type=float, default=None)
+parser.add_argument(
+    "--ratio_unfair_nodes", type=float, default=None
+)  # number of nodes to make unfair
 parser.add_argument("--group_to_reduce", type=float, default=None, nargs="+")
 parser.add_argument("--group_to_increment", type=float, default=None, nargs="+")
-parser.add_argument("--ratio_unfairness", type=float, default=None)
+parser.add_argument(
+    "--ratio_unfairness", type=float, default=None
+)  # how much we want to unbalance the dataset on the unfair nodes
 parser.add_argument("--validation_size", type=float, default=None)
 
+# Parameters for privacy-preserving trainign
+parser.add_argument("--epsilon", type=float, default=None)
+parser.add_argument("--clipping", type=float, default=100000000)
 
-parser.add_argument("--training_nodes", type=float, default=None)
-parser.add_argument("--validation_nodes", type=float, default=None)
-parser.add_argument("--test_nodes", type=float, default=None)
+# Percentage of nodes to use for training, validation and test
+parser.add_argument("--fraction_fit_nodes", type=float, default=None)
+parser.add_argument("--fraction_validation_nodes", type=float, default=None)
+parser.add_argument("--fraction_test_nodes", type=float, default=None)
 
+# Percentage of nodes to sample for training, validation and test
 parser.add_argument("--sampled_training_nodes", type=float, default=None)
 parser.add_argument("--sampled_validation_nodes", type=float, default=None)
 parser.add_argument("--sampled_test_nodes", type=float, default=None)
 
+# Parameters for the wandb logging
+parser.add_argument("--wandb", type=bool, default=False)
+parser.add_argument("--run_name", type=str, default=None)
+parser.add_argument("--project_name", type=str, default=None)
 
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal_handler)
-    signal.pause()
 
     # remove files in tmp/ray
     args = parser.parse_args()
+
     preferences = Preferences(
         dataset=args.dataset_name,
         dataset_path=args.dataset_path,
@@ -89,10 +106,22 @@ if __name__ == "__main__":
         if args.ratio_unfairness
         else None,
         validation=True if args.validation_size else False,
-        valiadtion_size=args.validation_size,
+        validation_size=args.validation_size if args.validation_size else None,
+        fed_dir=f"{args.dataset_path}/federated/",
+        epsilon=args.epsilon,
+        clipping=args.clipping,
+        node_shuffle_seed=args.node_shuffle_seed,
+        wandb=args.wandb,
+        project_name=args.project_name,
+        run_name=args.run_name,
+        fraction_fit_nodes=args.fraction_fit_nodes,
+        fraction_validation_nodes=args.fraction_validation_nodes,
+        fraction_test_nodes=args.fraction_test_nodes,
     )
 
     Utils.seed_everything(args.seed)
+
+    wandb_run = Utils.setup_wandb(preferences) if args.wandb else None
 
     if preferences.tabular:
         if preferences.cross_device:
@@ -115,9 +144,14 @@ if __name__ == "__main__":
     else:
         raise ValueError("Only tabular datasets are supported")
 
-    num_training_nodes = int(args.pool_size * args.training_nodes)
-    num_validation_nodes = int(args.pool_size * args.validation_nodes)
-    num_test_nodes = int(args.pool_size * args.test_nodes)
+    if preferences.cross_device:
+        preferences.num_training_nodes = int(args.num_nodes * args.training_nodes)
+        preferences.num_validation_nodes = int(args.num_nodes * args.validation_nodes)
+        preferences.num_test_nodes = int(args.num_nodes * args.test_nodes)
+    else:
+        preferences.num_training_nodes = int(args.num_nodes)
+        preferences.num_validation_nodes = int(args.num_nodes)
+        preferences.num_test_nodes = int(args.num_nodes)
 
     model = Utils.get_model(preferences.dataset, "cuda")
     model_parameters = [val.cpu().numpy() for _, val in model.state_dict().items()]
@@ -187,42 +221,30 @@ if __name__ == "__main__":
         "num_cpus": ray_num_cpus,
         "num_gpus": ray_num_gpus,
         "_memory": ram_memory,
-        "_redis_max_memory": 100000000,
-        "object_store_memory": 100000000,
+        "_redis_max_memory": 10000000,
+        "object_store_memory": 78643200,
         "logging_level": logging.ERROR,
         "log_to_driver": True,
     }
 
     client_manager = SimpleClientManager(
-        seed=args.seed,
-        num_clients=pool_size,
-        sort_clients=args.sort_clients,
-        num_training_nodes=num_training_nodes,
-        num_validation_nodes=num_validation_nodes,
-        num_test_nodes=num_test_nodes,
-        node_shuffle_seed=args.node_shuffle_seed,
-        fed_dir=fed_dir,
-        ratio_unfair_nodes=args.ratio_unfair_nodes,
-        fl_rounds=args.num_rounds,
-        fraction_fit=args.sampled_clients,
-        fraction_evaluate=args.sampled_clients_validation,
-        fraction_test=args.sampled_clients_test,
+        preferences=preferences,
     )
     server = Server(client_manager=client_manager, strategy=strategy)
 
-    fl.simulation.start_simulation(
-        client_fn=client_fn,
-        num_clients=pool_size,
-        client_resources=client_resources,
-        config=fl.server.ServerConfig(num_rounds=args.num_rounds),
-        strategy=strategy,
-        ray_init_args=ray_init_args,
-        server=server,
-        client_manager=client_manager,
-    )
+    # fl.simulation.start_simulation(
+    #     client_fn=client_fn,
+    #     num_clients=pool_size,
+    #     client_resources=client_resources,
+    #     config=fl.server.ServerConfig(num_rounds=args.num_rounds),
+    #     strategy=strategy,
+    #     ray_init_args=ray_init_args,
+    #     server=server,
+    #     client_manager=client_manager,
+    # )
 
-    if wandb_run:
-        wandb_run.finish()
+    # if wandb_run:
+    #     wandb_run.finish()
 
 # # # iid test
 # # preferences = Preferences(
