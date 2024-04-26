@@ -6,9 +6,9 @@ import warnings
 import dill
 import flwr as fl
 import ray
-from federated_baseline.Utils.learning import Learning
-from federated_baseline.Utils.utils import Utils
 from opacus import PrivacyEngine
+
+from fltemplate.Utils.utils import Utils
 
 
 class FlowerClient(fl.client.NumPyClient):
