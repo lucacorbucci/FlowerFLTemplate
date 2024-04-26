@@ -68,18 +68,25 @@ class SimpleClientManager(ClientManager):
         self.current_index_training = 0
         self.current_index_validation = 0
         self.current_index_test = 0
+
+        # Percentage of nodes sampled during the training from
+        # train, validation and test set
+        self.sampled_training_nodes = preferences.sampled_training_nodes
+        self.sampled_validation_nodes = preferences.sampled_validation_nodes
+        self.sampled_test_nodes = preferences.sampled_test_nodes
+
+        # Fraction of nodes for training, validation and test
         self.num_training_nodes = preferences.num_training_nodes
         self.num_validation_nodes = preferences.num_validation_nodes
         self.num_test_nodes = preferences.num_test_nodes
+
         self.node_shuffle_seed = preferences.node_shuffle_seed
         self.fed_dir = preferences.fed_dir
         self.ratio_unfair_nodes = (
             preferences.ratio_unfair_nodes if preferences.ratio_unfair_nodes else 0
         )
         self.fl_rounds = preferences.fl_rounds
-        self.fraction_train = preferences.fraction_fit_nodes
-        self.fraction_validation = preferences.fraction_validation_nodes
-        self.fraction_test = preferences.fraction_test_nodes
+
         self.num_round_train = 0
         self.num_round_validation = 0
         self.num_round_test = 0
@@ -228,9 +235,11 @@ class SimpleClientManager(ClientManager):
                 fair_group = self.clients_list[:fair_group_size]
 
                 fair_test_nodes = int(
-                    self.num_test_nodes * (1 - self.ratio_unfair_nodes)
+                    self.fraction_test_nodes * (1 - self.ratio_unfair_nodes)
                 )
-                unfair_test_nodes = int(self.num_test_nodes * self.ratio_unfair_nodes)
+                unfair_test_nodes = int(
+                    self.fraction_test_nodes * self.ratio_unfair_nodes
+                )
 
                 self.fair_test_clients = fair_group[:fair_test_nodes]
                 self.unfair_test_clients = unfair_group[:unfair_test_nodes]
@@ -239,7 +248,7 @@ class SimpleClientManager(ClientManager):
                 )
 
                 sampled_nodes_test = self.pre_sample_clients_representative_diversity(
-                    fraction=self.fraction_test,
+                    fraction=self.sampled_test_nodes,
                     ratio_unfair=self.ratio_unfair_nodes,
                     unfair_group=self.unfair_test_clients,
                     fair_group=self.fair_test_clients,
@@ -348,16 +357,16 @@ class SimpleClientManager(ClientManager):
                 # In this case I'm in the cross-silo case
                 # This means that each node has training, validation and test data
                 # so each node could be used for training, validation and testing
-                if self.fraction_validation > 0:
+                if self.sampled_validation_nodes:
                     sampled_nodes_validation = self.pre_sample_clients(
-                        fraction=self.fraction_validation,
+                        fraction=self.sampled_validation_nodes,
                         client_list=self.clients_list,
                     )
                     with open(f"{self.fed_dir}/validation_nodes.pkl", "wb") as f:
                         dill.dump(sampled_nodes_validation, f)
 
                 sampled_nodes_test = self.pre_sample_clients(
-                    fraction=self.fraction_test,
+                    fraction=self.sampled_test_nodes,
                     client_list=self.clients_list,
                 )
 
@@ -365,7 +374,7 @@ class SimpleClientManager(ClientManager):
                     dill.dump(sampled_nodes_test, f)
 
                 sampled_nodes_train = self.pre_sample_clients(
-                    fraction=self.fraction_train,
+                    fraction=self.sampled_training_nodes,
                     client_list=self.clients_list,
                 )
                 with open(f"{self.fed_dir}/train_nodes.pkl", "wb") as f:
