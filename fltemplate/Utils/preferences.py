@@ -13,6 +13,7 @@ class Preferences:
     batch_size: int
     # seed to use during the training
     seed: int
+    node_shuffle_seed: int
     optimizer: str
     learning_rate: float
     # regularization is True if we want to use the regularization to
@@ -31,3 +32,10 @@ class Preferences:
     group_to_increment: tuple = None
     ratio_unfairness: tuple = None
     validation: bool = False
+    num_training_nodes = None
+    num_validation_nodes = None
+    num_test_nodes = None
+    epsilon = None
+    clipping = None
+    noise_multiplier = None
+    validation_size = None
