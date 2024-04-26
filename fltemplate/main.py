@@ -67,14 +67,19 @@ parser.add_argument("--fraction_validation_nodes", type=float, default=None)
 parser.add_argument("--fraction_test_nodes", type=float, default=None)
 
 # Percentage of nodes to sample for training, validation and test
-parser.add_argument("--sampled_training_nodes", type=float, default=None)
+parser.add_argument("--sampled_training_nodes", type=float, default=1.0)
 parser.add_argument("--sampled_validation_nodes", type=float, default=None)
-parser.add_argument("--sampled_test_nodes", type=float, default=None)
+parser.add_argument("--sampled_test_nodes", type=float, default=1.0)
 
 # Parameters for the wandb logging
 parser.add_argument("--wandb", type=bool, default=False)
 parser.add_argument("--run_name", type=str, default=None)
 parser.add_argument("--project_name", type=str, default=None)
+
+# configuration for the clients. What percentage of CPU and GPU each client can use
+parser.add_argument("--num_client_cpus", type=float, default=None)
+parser.add_argument("--num_client_gpus", type=float, default=None)
+
 
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal_handler)
@@ -114,9 +119,9 @@ if __name__ == "__main__":
         wandb=args.wandb,
         project_name=args.project_name,
         run_name=args.run_name,
-        fraction_fit_nodes=args.fraction_fit_nodes,
-        fraction_validation_nodes=args.fraction_validation_nodes,
-        fraction_test_nodes=args.fraction_test_nodes,
+        sampled_training_nodes=args.sampled_training_nodes,
+        sampled_validation_nodes=args.sampled_validation_nodes,
+        sampled_test_nodes=args.sampled_test_nodes,
     )
 
     Utils.seed_everything(args.seed)
@@ -145,9 +150,13 @@ if __name__ == "__main__":
         raise ValueError("Only tabular datasets are supported")
 
     if preferences.cross_device:
-        preferences.num_training_nodes = int(args.num_nodes * args.training_nodes)
-        preferences.num_validation_nodes = int(args.num_nodes * args.validation_nodes)
-        preferences.num_test_nodes = int(args.num_nodes * args.test_nodes)
+        preferences.num_training_nodes = int(
+            args.num_nodes * args.fraction_training_nodes
+        )
+        preferences.num_validation_nodes = int(
+            args.num_nodes * args.fraction_validation_nodes
+        )
+        preferences.num_test_nodes = int(args.num_nodes * args.fraction_test_nodes)
     else:
         preferences.num_training_nodes = int(args.num_nodes)
         preferences.num_validation_nodes = int(args.num_nodes)
@@ -162,7 +171,7 @@ if __name__ == "__main__":
         config = {
             "epochs": args.epochs,  # number of local epochs
             "batch_size": args.batch_size,
-            "dataset": args.dataset,
+            "dataset": preferences.dataset,
             "server_round": server_round,
         }
         return config
@@ -172,7 +181,7 @@ if __name__ == "__main__":
         config = {
             "epochs": args.epochs,  # number of local epochs
             "batch_size": args.batch_size,
-            "dataset": args.dataset,
+            "dataset": preferences.dataset,
         }
         return config
 
@@ -209,12 +218,6 @@ if __name__ == "__main__":
         wandb_run=wandb_run,
     )
 
-    # these parameters are used to configure Ray and they are dependent on
-    # the machine we want to use to run the experiments
-    ray_num_cpus = 40
-    ray_num_gpus = 2
-    ram_memory = 16_000 * 1024 * 1024 * 2
-
     # (optional) specify Ray config
     ray_init_args = {
         "include_dashboard": False,
@@ -226,25 +229,28 @@ if __name__ == "__main__":
         "logging_level": logging.ERROR,
         "log_to_driver": True,
     }
+    client_resources = {
+        "num_cpus": args.num_client_cpus,
+        "num_gpus": args.num_client_gpus,
+    }
 
     client_manager = SimpleClientManager(
         preferences=preferences,
     )
     server = Server(client_manager=client_manager, strategy=strategy)
 
-    # fl.simulation.start_simulation(
-    #     client_fn=client_fn,
-    #     num_clients=pool_size,
-    #     client_resources=client_resources,
-    #     config=fl.server.ServerConfig(num_rounds=args.num_rounds),
-    #     strategy=strategy,
-    #     ray_init_args=ray_init_args,
-    #     server=server,
-    #     client_manager=client_manager,
-    # )
+    fl.simulation.start_simulation(
+        client_fn=client_fn,
+        num_clients=args.num_nodes,
+        client_resources=client_resources,
+        config=fl.server.ServerConfig(num_rounds=args.fl_rounds),
+        ray_init_args=ray_init_args,
+        server=server,
+        client_manager=client_manager,
+    )
 
-    # if wandb_run:
-    #     wandb_run.finish()
+    if wandb_run:
+        wandb_run.finish()
 
 # # # iid test
 # # preferences = Preferences(
