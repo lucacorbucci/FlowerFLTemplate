@@ -46,6 +46,6 @@ class Preferences:
     run_name: str = None
     wandb: bool = False
 
-    fraction_fit_nodes: float = None
-    fraction_validation_nodes: float = None
-    fraction_test_nodes: float = None
+    sampled_training_nodes: float = None
+    sampled_validation_nodes: float = None
+    sampled_test_nodes: float = None
