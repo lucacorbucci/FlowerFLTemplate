@@ -4,12 +4,14 @@ from typing import Any, Callable, List, Optional, Tuple
 
 import numpy as np
 import torch
-from federated_baseline.Models.celeba import CelebaNet
-from federated_baseline.Models.logistic_regression_net import LinearClassificationNet
 from opacus import PrivacyEngine
 from opacus.grad_sample import GradSampleModule
 from opacus.optimizers import DPOptimizer
 from torch.utils.data import DataLoader
+
+from fltemplate.Models.celeba import CelebaNet
+from fltemplate.Models.logistic_regression_net import LinearClassificationNet
+from fltemplate.Utils.preferences import Preferences
 
 
 class Utils:
