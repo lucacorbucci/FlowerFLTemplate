@@ -77,9 +77,9 @@ class SimpleClientManager(ClientManager):
             preferences.ratio_unfair_nodes if preferences.ratio_unfair_nodes else 0
         )
         self.fl_rounds = preferences.fl_rounds
-        self.fraction_train = preferences.fraction_fit
-        self.fraction_validation = preferences.fraction_evaluate
-        self.fraction_test = preferences.fraction_test
+        self.fraction_train = preferences.fraction_fit_nodes
+        self.fraction_validation = preferences.fraction_validation_nodes
+        self.fraction_test = preferences.fraction_test_nodes
         self.num_round_train = 0
         self.num_round_validation = 0
         self.num_round_test = 0
