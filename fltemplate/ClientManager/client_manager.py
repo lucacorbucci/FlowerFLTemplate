@@ -126,43 +126,54 @@ class SimpleClientManager(ClientManager):
                 lambda: len(self.clients) >= num_clients, timeout=timeout
             )
 
-    def pre_sample_clients(
+    def pre_sample_clients_representative_diversity(
         self, fraction, ratio_unfair, unfair_group, fair_group, client_list
     ):
         sampled_nodes = {}
-        if self.preferences.split_approach == "representative_diversity":
-            for fl_round in range(self.fl_rounds):
-                # number of nodes we have to select in each round
-                nodes_to_sample = int(fraction * len(client_list))
-                num_fair_nodes_sampled = int(nodes_to_sample * (1 - ratio_unfair))
-                num_unfair_nodes_sampled = int(nodes_to_sample * ratio_unfair)
-                start = fl_round * num_fair_nodes_sampled % len(fair_group)
+        for fl_round in range(self.fl_rounds):
+            # number of nodes we have to select in each round
+            nodes_to_sample = int(fraction * len(client_list))
+            num_fair_nodes_sampled = int(nodes_to_sample * (1 - ratio_unfair))
+            num_unfair_nodes_sampled = int(nodes_to_sample * ratio_unfair)
+            start = fl_round * num_fair_nodes_sampled % len(fair_group)
+            end = (fl_round * num_fair_nodes_sampled + num_fair_nodes_sampled) % len(
+                fair_group
+            )
+
+            if start < end:
+                fair_nodes_sampled = fair_group[start:end]
+            else:
+                fair_nodes_sampled = fair_group[start:] + fair_group[:end]
+
+            if len(unfair_group) > 0:
+                start = fl_round * num_unfair_nodes_sampled % len(unfair_group)
                 end = (
-                    fl_round * num_fair_nodes_sampled + num_fair_nodes_sampled
-                ) % len(fair_group)
+                    fl_round * num_unfair_nodes_sampled + num_unfair_nodes_sampled
+                ) % len(unfair_group)
 
                 if start < end:
-                    fair_nodes_sampled = fair_group[start:end]
+                    unfair_nodes_sampled = unfair_group[start:end]
                 else:
-                    fair_nodes_sampled = fair_group[start:] + fair_group[:end]
+                    unfair_nodes_sampled = unfair_group[start:] + unfair_group[:end]
 
-                if len(unfair_group) > 0:
-                    start = fl_round * num_unfair_nodes_sampled % len(unfair_group)
-                    end = (
-                        fl_round * num_unfair_nodes_sampled + num_unfair_nodes_sampled
-                    ) % len(unfair_group)
+                sampled_nodes[fl_round] = fair_nodes_sampled + unfair_nodes_sampled
+            else:
+                sampled_nodes[fl_round] = fair_nodes_sampled
 
-                    if start < end:
-                        unfair_nodes_sampled = unfair_group[start:end]
-                    else:
-                        unfair_nodes_sampled = unfair_group[start:] + unfair_group[:end]
+        return sampled_nodes
 
-                    sampled_nodes[fl_round] = fair_nodes_sampled + unfair_nodes_sampled
-                else:
-                    sampled_nodes[fl_round] = fair_nodes_sampled
-        else:
-            pass
+    def pre_sample_clients(self, fraction, client_list):
+        sampled_nodes = {}
+        nodes_to_sample = int(fraction * len(client_list))
+        for fl_round in range(self.fl_rounds):
+            if fraction == 1.0:
+                start = 0
+                end = len(client_list)
+            else:
+                start = fl_round * nodes_to_sample % len(client_list)
+                end = (fl_round * nodes_to_sample + nodes_to_sample) % len(client_list)
 
+            sampled_nodes[fl_round] = client_list[start:end]
         return sampled_nodes
 
     def register(self, client: ClientProxy) -> bool:
@@ -187,130 +198,182 @@ class SimpleClientManager(ClientManager):
         self.clients_list.append(client.cid)
 
         if self.num_clients == len(self.clients_list):
-            random.seed(self.seed)
-            self.clients_list = [
-                str(client_id)
-                for client_id in sorted(
-                    [int(client_id) for client_id in self.clients_list]
+            # Here we seed the random number generator with the
+            # seed a different seed that the one that we use in other parts of the
+            # code. This is because we want to be sure that the nodes that we select
+            # for training, validation and testing changes when we change the seed.
+
+            # In the case of a cross device experiment with a representative diversity
+            # distribution
+            if (
+                self.preferences.cross_device
+                and self.preferences.cross_device == "representative_diversity"
+            ):
+                # I want to be sure that in the test set we have always the same nodes
+                # and that the distribution of the disparities of the nodes is the same
+                # as the ones in the training set.
+                random.seed(self.seed)
+                self.clients_list = [
+                    str(client_id)
+                    for client_id in sorted(
+                        [int(client_id) for client_id in self.clients_list]
+                    )
+                ]
+                print("Clients list: ", self.clients_list)
+
+                fair_group_size = int(
+                    len(self.clients_list) * (1 - self.ratio_unfair_nodes)
                 )
-            ]
-            print("Clients list: ", self.clients_list)
+                unfair_group = self.clients_list[fair_group_size:]
+                fair_group = self.clients_list[:fair_group_size]
 
-            # I want to be sure that in the test set we have always the same nodes
-            # and that the distribution of the disparities of the nodes is the same
-            # as the ones in the training set.
+                fair_test_nodes = int(
+                    self.num_test_nodes * (1 - self.ratio_unfair_nodes)
+                )
+                unfair_test_nodes = int(self.num_test_nodes * self.ratio_unfair_nodes)
 
-            fair_group_size = int(
-                len(self.clients_list) * (1 - self.ratio_unfair_nodes)
-            )
-            unfair_group = self.clients_list[fair_group_size:]
-            fair_group = self.clients_list[:fair_group_size]
+                self.fair_test_clients = fair_group[:fair_test_nodes]
+                self.unfair_test_clients = unfair_group[:unfair_test_nodes]
+                self.test_clients_list = (
+                    fair_group[:fair_test_nodes] + unfair_group[:unfair_test_nodes]
+                )
 
-            fair_test_nodes = int(self.num_test_nodes * (1 - self.ratio_unfair_nodes))
-            unfair_test_nodes = int(self.num_test_nodes * self.ratio_unfair_nodes)
-
-            self.fair_test_clients = fair_group[:fair_test_nodes]
-            self.unfair_test_clients = unfair_group[:unfair_test_nodes]
-            self.test_clients_list = (
-                fair_group[:fair_test_nodes] + unfair_group[:unfair_test_nodes]
-            )
-
-            sampled_nodes_test = self.pre_sample_clients(
-                fraction=self.fraction_test,
-                ratio_unfair=self.ratio_unfair_nodes,
-                unfair_group=self.unfair_test_clients,
-                fair_group=self.fair_test_clients,
-                client_list=self.test_clients_list,
-            )
-
-            with open(f"{self.fed_dir}/test_nodes.pkl", "wb") as f:
-                dill.dump(sampled_nodes_test, f)
-
-            with open(f"{self.fed_dir}/all_test_nodes.pkl", "wb") as f:
-                dill.dump(self.test_clients_list, f)
-
-            self.remaining_fair = fair_group[fair_test_nodes:]
-            self.remaining_unfair = unfair_group[unfair_test_nodes:]
-
-            print("Nodes in the test set: ", self.test_clients_list)
-            print("Fair Test Nodes: ", len(self.fair_test_clients))
-            print("Unfair Test Nodes: ", len(self.unfair_test_clients))
-
-            random.seed(self.node_shuffle_seed)
-            random.shuffle(self.remaining_fair)
-            random.shuffle(self.remaining_unfair)
-
-            fair_train_nodes = int(
-                self.num_training_nodes * (1 - self.ratio_unfair_nodes)
-            )
-            unfair_train_nodes = int(self.num_training_nodes * self.ratio_unfair_nodes)
-            self.fair_training_clients = self.remaining_fair[:fair_train_nodes]
-            self.unfair_training_clients = self.remaining_unfair[:unfair_train_nodes]
-            self.training_clients_list = (
-                self.remaining_fair[:fair_train_nodes]
-                + self.remaining_unfair[:unfair_train_nodes]
-            )
-
-            sampled_nodes_train = self.pre_sample_clients(
-                fraction=self.fraction_train,
-                ratio_unfair=self.ratio_unfair_nodes,
-                unfair_group=self.unfair_training_clients,
-                fair_group=self.fair_training_clients,
-                client_list=self.training_clients_list,
-            )
-            with open(f"{self.fed_dir}/train_nodes.pkl", "wb") as f:
-                dill.dump(sampled_nodes_train, f)
-
-            with open(f"{self.fed_dir}/all_train_nodes.pkl", "wb") as f:
-                dill.dump(self.training_clients_list, f)
-
-            counter_sampling = {}
-            for sample_list in sampled_nodes_train.values():
-                for node in sample_list:
-                    if node not in counter_sampling:
-                        counter_sampling[str(node)] = 0
-                    counter_sampling[str(node)] += 1
-
-            with open(f"{self.fed_dir}/counter_sampling.pkl", "wb") as f:
-                dill.dump(counter_sampling, f)
-
-            print("Nodes in the training set: ", self.training_clients_list)
-            print("Fair Training Nodes: ", len(self.fair_training_clients))
-            print("Unfair Training Nodes: ", len(self.unfair_training_clients))
-
-            self.fair_validation_clients = self.remaining_fair[fair_train_nodes:]
-            self.unfair_validation_clients = self.remaining_unfair[unfair_train_nodes:]
-            self.validation_clients_list = (
-                self.fair_validation_clients + self.unfair_validation_clients
-            )
-            # I want to be sure that in self.validation_clients_list we have an alternation of
-            # fair and unfair nodes
-
-            if self.fraction_validation > 0:
-                sampled_nodes_validation = self.pre_sample_clients(
-                    fraction=self.fraction_validation,
+                sampled_nodes_test = self.pre_sample_clients_representative_diversity(
+                    fraction=self.fraction_test,
                     ratio_unfair=self.ratio_unfair_nodes,
-                    unfair_group=self.unfair_validation_clients,
-                    fair_group=self.fair_validation_clients,
-                    client_list=self.validation_clients_list,
+                    unfair_group=self.unfair_test_clients,
+                    fair_group=self.fair_test_clients,
+                    client_list=self.test_clients_list,
                 )
-                with open(f"{self.fed_dir}/validation_nodes.pkl", "wb") as f:
-                    dill.dump(sampled_nodes_validation, f)
 
-                with open(f"{self.fed_dir}/all_validation_nodes.pkl", "wb") as f:
-                    dill.dump(self.validation_clients_list, f)
+                with open(f"{self.fed_dir}/test_nodes.pkl", "wb") as f:
+                    dill.dump(sampled_nodes_test, f)
 
-            random.seed(self.seed)
+                with open(f"{self.fed_dir}/all_test_nodes.pkl", "wb") as f:
+                    dill.dump(self.test_clients_list, f)
 
-            print("Nodes in the validation set: ", self.validation_clients_list)
-            print("Fair Validation Nodes: ", len(self.fair_validation_clients))
-            print("Unfair Validation Nodes: ", len(self.unfair_validation_clients))
-            print(
-                "Total number of nodes: ",
-                len(self.test_clients_list)
-                + len(self.training_clients_list)
-                + len(self.validation_clients_list),
-            )
+                self.remaining_fair = fair_group[fair_test_nodes:]
+                self.remaining_unfair = unfair_group[unfair_test_nodes:]
+
+                print("Nodes in the test set: ", self.test_clients_list)
+                print("Fair Test Nodes: ", len(self.fair_test_clients))
+                print("Unfair Test Nodes: ", len(self.unfair_test_clients))
+
+                random.seed(self.node_shuffle_seed)
+                random.shuffle(self.remaining_fair)
+                random.shuffle(self.remaining_unfair)
+
+                fair_train_nodes = int(
+                    self.num_training_nodes * (1 - self.ratio_unfair_nodes)
+                )
+                unfair_train_nodes = int(
+                    self.num_training_nodes * self.ratio_unfair_nodes
+                )
+                self.fair_training_clients = self.remaining_fair[:fair_train_nodes]
+                self.unfair_training_clients = self.remaining_unfair[
+                    :unfair_train_nodes
+                ]
+                self.training_clients_list = (
+                    self.remaining_fair[:fair_train_nodes]
+                    + self.remaining_unfair[:unfair_train_nodes]
+                )
+
+                sampled_nodes_train = self.pre_sample_clients_representative_diversity(
+                    fraction=self.fraction_train,
+                    ratio_unfair=self.ratio_unfair_nodes,
+                    unfair_group=self.unfair_training_clients,
+                    fair_group=self.fair_training_clients,
+                    client_list=self.training_clients_list,
+                )
+                with open(f"{self.fed_dir}/train_nodes.pkl", "wb") as f:
+                    dill.dump(sampled_nodes_train, f)
+
+                with open(f"{self.fed_dir}/all_train_nodes.pkl", "wb") as f:
+                    dill.dump(self.training_clients_list, f)
+
+                counter_sampling = {}
+                for sample_list in sampled_nodes_train.values():
+                    for node in sample_list:
+                        if node not in counter_sampling:
+                            counter_sampling[str(node)] = 0
+                        counter_sampling[str(node)] += 1
+
+                with open(f"{self.fed_dir}/counter_sampling.pkl", "wb") as f:
+                    dill.dump(counter_sampling, f)
+
+                print("Nodes in the training set: ", self.training_clients_list)
+                print("Fair Training Nodes: ", len(self.fair_training_clients))
+                print("Unfair Training Nodes: ", len(self.unfair_training_clients))
+
+                self.fair_validation_clients = self.remaining_fair[fair_train_nodes:]
+                self.unfair_validation_clients = self.remaining_unfair[
+                    unfair_train_nodes:
+                ]
+                self.validation_clients_list = (
+                    self.fair_validation_clients + self.unfair_validation_clients
+                )
+                # I want to be sure that in self.validation_clients_list we have an alternation of
+                # fair and unfair nodes
+
+                if self.fraction_validation > 0:
+                    sampled_nodes_validation = (
+                        self.pre_sample_clients_representative_diversity(
+                            fraction=self.fraction_validation,
+                            ratio_unfair=self.ratio_unfair_nodes,
+                            unfair_group=self.unfair_validation_clients,
+                            fair_group=self.fair_validation_clients,
+                            client_list=self.validation_clients_list,
+                        )
+                    )
+                    with open(f"{self.fed_dir}/validation_nodes.pkl", "wb") as f:
+                        dill.dump(sampled_nodes_validation, f)
+
+                    with open(f"{self.fed_dir}/all_validation_nodes.pkl", "wb") as f:
+                        dill.dump(self.validation_clients_list, f)
+
+                random.seed(self.seed)
+
+                print("Nodes in the validation set: ", self.validation_clients_list)
+                print("Fair Validation Nodes: ", len(self.fair_validation_clients))
+                print("Unfair Validation Nodes: ", len(self.unfair_validation_clients))
+                print(
+                    "Total number of nodes: ",
+                    len(self.test_clients_list)
+                    + len(self.training_clients_list)
+                    + len(self.validation_clients_list),
+                )
+            elif not self.preferences.cross_device:
+                random.seed(self.node_shuffle_seed)
+                random.shuffle(self.clients_list)
+                # In this case I'm in the cross-silo case
+                # This means that each node has training, validation and test data
+                # so each node could be used for training, validation and testing
+                if self.fraction_validation > 0:
+                    sampled_nodes_validation = self.pre_sample_clients(
+                        fraction=self.fraction_validation,
+                        client_list=self.clients_list,
+                    )
+                    with open(f"{self.fed_dir}/validation_nodes.pkl", "wb") as f:
+                        dill.dump(sampled_nodes_validation, f)
+
+                sampled_nodes_test = self.pre_sample_clients(
+                    fraction=self.fraction_test,
+                    client_list=self.clients_list,
+                )
+
+                with open(f"{self.fed_dir}/test_nodes.pkl", "wb") as f:
+                    dill.dump(sampled_nodes_test, f)
+
+                sampled_nodes_train = self.pre_sample_clients(
+                    fraction=self.fraction_train,
+                    client_list=self.clients_list,
+                )
+                with open(f"{self.fed_dir}/train_nodes.pkl", "wb") as f:
+                    dill.dump(sampled_nodes_train, f)
+                random.seed(self.seed)
+
+            else:
+                raise NotImplementedError()
 
         with self._cv:
             self._cv.notify_all()
