@@ -32,10 +32,20 @@ class Preferences:
     group_to_increment: tuple = None
     ratio_unfairness: tuple = None
     validation: bool = False
-    num_training_nodes = None
-    num_validation_nodes = None
-    num_test_nodes = None
-    epsilon = None
-    clipping = None
-    noise_multiplier = None
-    validation_size = None
+
+    num_training_nodes: int = None
+    num_validation_nodes: int = None
+    num_test_nodes: int = None
+
+    epsilon: float = None
+    clipping: float = None
+    noise_multiplier: float = None
+    validation_size: float = None
+    fed_dir: str = None
+    project_name: str = None
+    run_name: str = None
+    wandb: bool = False
+
+    fraction_fit_nodes: float = None
+    fraction_validation_nodes: float = None
+    fraction_test_nodes: float = None
