@@ -8,6 +8,7 @@ import flwr as fl
 import ray
 from opacus import PrivacyEngine
 
+from fltemplate.Learning.learning import Learning
 from fltemplate.Utils.utils import Utils
 
 
