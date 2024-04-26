@@ -4,6 +4,7 @@ from typing import Any, Callable, List, Optional, Tuple
 
 import numpy as np
 import torch
+import wandb
 from opacus import PrivacyEngine
 from opacus.grad_sample import GradSampleModule
 from opacus.optimizers import DPOptimizer
@@ -64,6 +65,8 @@ class Utils:
         elif dataset == "dutch":
             return LinearClassificationNet(input_size=11, output_size=2)
         elif dataset == "income":
+            return LinearClassificationNet(input_size=54, output_size=2)
+        elif dataset == "adult":
             return LinearClassificationNet(input_size=54, output_size=2)
         else:
             raise ValueError(f"Dataset {dataset} not supported")
@@ -152,3 +155,27 @@ class Utils:
             print(f"Created private model with noise {optimizer.noise_multiplier}")
 
         return private_model, optimizer, train_loader, privacy_engine
+
+    @staticmethod
+    def setup_wandb(preferences):
+        wandb_run = wandb.init(
+            # set the wandb project where this run will be logged
+            project=preferences.project_name,
+            name="experiment" if not preferences.run_name else preferences.run_name,
+            # track hyperparameters and run metadata
+            config={
+                "learning_rate": preferences.learning_rate,
+                "batch_size": preferences.batch_size,
+                "dataset": preferences.dataset,
+                "num_rounds": preferences.fl_rounds,
+                "num_nodes": preferences.num_nodes,
+                "epochs": preferences.epochs,
+                "epsilon": preferences.epsilon if preferences.epsilon else None,
+                "gradnorm": preferences.clipping,
+                "ratio_unfair_nodes": preferences.ratio_unfair_nodes,
+                "node_shuffle_seed": preferences.node_shuffle_seed,
+                "ratio_unfairness": preferences.ratio_unfairness,
+            },
+        )
+
+        return wandb_run
