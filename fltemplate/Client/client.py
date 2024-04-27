@@ -26,11 +26,13 @@ class FlowerClient(fl.client.NumPyClient):
         self.preferences = preferences
         self.net = Utils.get_model(preferences.dataset, device=self.preferences.device)
         self.optimizer = Utils.get_optimizer(model=self.net, preferences=preferences)
+        self.fed_dir = preferences.fed_dir
 
     def get_parameters(self, config):
         return Utils.get_params(self.net)
 
-    def fit(self, parameters, config, average_probabilities=None):
+    def fit(self, parameters, config):
+        print("Fit function called")
         Utils.set_params(self.net, parameters)
 
         with open(f"{self.fed_dir}/counter_sampling.pkl", "rb") as f:
@@ -44,7 +46,7 @@ class FlowerClient(fl.client.NumPyClient):
             self.cid,
             batch_size=config["batch_size"],
             workers=num_workers,
-            dataset=self.dataset_name,
+            dataset=self.preferences.dataset,
             partition="train",
         )
 
@@ -147,7 +149,7 @@ class FlowerClient(fl.client.NumPyClient):
             self.cid,
             batch_size=self.preferences.batch_size,
             workers=num_workers,
-            dataset=self.dataset_name,
+            dataset=self.preferences.dataset,
             partition="train",
         )
 
@@ -177,7 +179,9 @@ class FlowerClient(fl.client.NumPyClient):
         )
 
     def get_noise(self, dataset, target_epsilon=None):
-        model_noise = Utils.get_model(self.dataset_name, device=self.preferences.device)
+        model_noise = Utils.get_model(
+            self.preferences.dataset, device=self.preferences.device
+        )
         privacy_engine = PrivacyEngine(accountant="rdp")
         optimizer_noise = Utils.get_optimizer(model_noise, self.preferences, self.lr)
         (
