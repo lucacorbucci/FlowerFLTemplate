@@ -38,8 +38,8 @@ class FederatedDataset:
                     }
                 )
             # remove the old files in the data folder
-            if split_name == "train":
-                os.system(f"rm -rf {preferences.dataset_path}/federated/*")
+            # if split_name == "train":
+            #     os.system(f"rm -rf {preferences.dataset_path}/federated/*")
             for client_name, client in enumerate(nodes):
                 # Append 1 to each samples
                 custom_dataset = TabularDataset(
