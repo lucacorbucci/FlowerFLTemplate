@@ -61,9 +61,7 @@ class Learning:
             "z_list": z_list,
         }
 
-    def train(
-        model, train_loader, optimizer, device, debias=None, new_weight_dict=None
-    ):
+    def train(model, train_loader, optimizer, device):
         model.train()
         criterion = nn.CrossEntropyLoss(reduction="none")
 
@@ -85,21 +83,10 @@ class Learning:
                 data = data.to(device)
                 target = target.long()
                 target = target.to(device)
-                if new_weight_dict:
-                    new_weights = []
-                    for t, sa in zip(target, z):
-                        new_weight = new_weight_dict[f"(Y={t}, Z={sa})"]
-                        new_weights.append(new_weight)
-                    w = torch.tensor(new_weights).to(device)
-                else:
-                    w = w.to(device)
 
                 # compute output
                 outputs = model(data)
-                if debias:
-                    loss = (criterion(outputs, target) * w).mean()
-                else:
-                    loss = criterion(outputs, target).mean()
+                loss = criterion(outputs, target).mean()
 
                 _, predicted = torch.max(outputs.data, 1)
                 correct = (predicted == target).float().sum()
