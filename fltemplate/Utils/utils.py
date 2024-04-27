@@ -161,30 +161,14 @@ class Utils:
         # make_private_with_epsilon() instead requires you to
         # provide a target epsilon and a target delta. In this
         # case you don't need to specify a noise multiplier.
-        if epsilon:
-            (
-                private_model,
-                optimizer,
-                train_loader,
-            ) = privacy_engine.make_private_with_epsilon(
-                module=model,
-                optimizer=original_optimizer,
-                data_loader=train_loader,
-                epochs=epochs,
-                target_epsilon=epsilon,
-                target_delta=delta,
-                max_grad_norm=MAX_GRAD_NORM,
-            )
-        else:
-            print(f"Create private model with noise multiplier {noise_multiplier}")
-            private_model, optimizer, train_loader = privacy_engine.make_private(
-                module=model,
-                optimizer=original_optimizer,
-                data_loader=train_loader,
-                noise_multiplier=noise_multiplier,
-                max_grad_norm=MAX_GRAD_NORM,
-            )
-            print(f"Created private model with noise {optimizer.noise_multiplier}")
+        private_model, optimizer, train_loader = privacy_engine.make_private(
+            module=model,
+            optimizer=original_optimizer,
+            data_loader=train_loader,
+            noise_multiplier=noise_multiplier,
+            max_grad_norm=preferences.clipping,
+        )
+        print(f"Created private model with noise {optimizer.noise_multiplier}")
 
         return private_model, optimizer, train_loader, privacy_engine
 
@@ -238,7 +222,7 @@ class Utils:
             if partition == "train"
             else "test"
             if partition == "test"
-            else "val"
+            else "validation"
         )
         dataset = Utils.get_dataset(Path(path_to_data), cid, partition, dataset)
 
@@ -267,3 +251,8 @@ class Utils:
                 path_to_data,
                 transform=Utils.get_transformation(dataset),
             )
+
+    @staticmethod
+    def get_params(model: torch.nn.ModuleList) -> List[np.ndarray]:
+        """Get model weights as a list of NumPy ndarrays."""
+        return [val.cpu().numpy() for _, val in model.state_dict().items()]
