@@ -138,6 +138,8 @@ class FedAvg(Strategy):
         self.fit_metrics_aggregation_fn = fit_metrics_aggregation_fn
         self.evaluate_metrics_aggregation_fn = evaluate_metrics_aggregation_fn
         self.test_metrics_aggregation_fn = test_metrics_aggregation_fn
+        self.wandb_run = wandb_run
+        self.fed_dir = preferences.fed_dir
 
     def __repr__(self) -> str:
         rep = f"FedAvg(accept_failures={self.accept_failures})"
@@ -293,7 +295,7 @@ class FedAvg(Strategy):
         if self.fit_metrics_aggregation_fn:
             fit_metrics = [(res.num_examples, res.metrics) for _, res in results]
             metrics_aggregated = self.fit_metrics_aggregation_fn(
-                fit_metrics, server_round, self.current_max_expsilon, self.fed_dir
+                fit_metrics, server_round, self.fed_dir, self.wandb_run
             )
         elif server_round == 1:  # Only log this warning once
             log(WARNING, "No fit_metrics_aggregation_fn provided")
@@ -328,6 +330,7 @@ class FedAvg(Strategy):
             metrics_aggregated = self.evaluate_metrics_aggregation_fn(
                 eval_metrics,
                 server_round,
+                self.wandb_run,
             )
         elif server_round == 1:  # Only log this warning once
             log(WARNING, "No evaluate_metrics_aggregation_fn provided")
@@ -362,6 +365,7 @@ class FedAvg(Strategy):
             metrics_aggregated = self.test_metrics_aggregation_fn(
                 eval_metrics,
                 server_round,
+                self.wandb_run,
             )
         elif server_round == 1:  # Only log this warning once
             log(WARNING, "No test_metrics_aggregation_fn provided")
