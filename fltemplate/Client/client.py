@@ -5,6 +5,7 @@ import warnings
 
 import dill
 import flwr as fl
+import numpy as np
 import ray
 from opacus import PrivacyEngine
 
@@ -32,8 +33,14 @@ class FlowerClient(fl.client.NumPyClient):
         return Utils.get_params(self.net)
 
     def fit(self, parameters, config):
-        print("Fit function called")
         Utils.set_params(self.net, parameters)
+
+        current_fl_round = config["server_round"]
+        random_generator = np.random.default_rng(
+            seed=[int(self.client_generator.random() * 2**32), current_fl_round]
+        )
+        seed = int(random_generator.random() * 2**32)
+        Utils.seed_everything(seed)
 
         with open(f"{self.fed_dir}/counter_sampling.pkl", "rb") as f:
             counter_sampling = dill.load(f)
@@ -62,17 +69,14 @@ class FlowerClient(fl.client.NumPyClient):
                 loaded_privacy_engine = dill.load(file)
 
         if self.preferences.epsilon is None:
-            noise = 0
-            self.noise_multiplier = noise
+            self.noise_multiplier = 0
             self.original_epsilon = None
         else:
             if os.path.exists(f"{self.fed_dir}/noise_level_{self.cid}.pkl"):
                 with open(f"{self.fed_dir}/noise_level_{self.cid}.pkl", "rb") as file:
                     self.noise_multiplier = dill.load(file)
-                    noise = self.noise_multiplier
                     self.original_epsilon = self.preferences.epsilon
                     self.preferences.epsilon = None
-                    print(self.original_epsilon)
             else:
                 noise = self.get_noise(dataset=train_loader)
                 with open(f"{self.fed_dir}/noise_level_{self.cid}.pkl", "wb") as file:
@@ -80,7 +84,6 @@ class FlowerClient(fl.client.NumPyClient):
                 self.noise_multiplier = noise
                 self.original_epsilon = self.preferences.epsilon
                 self.preferences.epsilon = None
-                print(self.original_epsilon)
 
         (
             private_net,
@@ -93,12 +96,10 @@ class FlowerClient(fl.client.NumPyClient):
             original_optimizer=self.optimizer,
             train_loader=train_loader,
             delta=self.delta,
-            noise_multiplier=noise,
+            noise_multiplier=self.noise_multiplier,
             accountant=loaded_privacy_engine,
         )
         private_net.to(self.preferences.device)
-
-        private_model_regularization = None
 
         gc.collect()
 
@@ -109,6 +110,7 @@ class FlowerClient(fl.client.NumPyClient):
                 model=private_net,
                 train_loader=train_loader,
                 optimizer=private_optimizer,
+                device=self.preferences.device,
             )
 
             all_metrics.append(metrics)
@@ -121,8 +123,6 @@ class FlowerClient(fl.client.NumPyClient):
         )
 
         del private_net
-        if private_model_regularization:
-            del private_model_regularization
         gc.collect()
 
         # Return local model and statistics
@@ -130,10 +130,10 @@ class FlowerClient(fl.client.NumPyClient):
             Utils.get_params(self.net),
             len(train_loader.dataset),
             {
-                "train_losses": all_losses,
-                "train_loss": final_metrics[-1]["Train Loss"],
-                "train_accuracy": final_metrics[-1]["Train Accuracy"],
-                "delta": None if self.original_epsilon is None else self.delta,
+                # "train_losses": all_losses,
+                "train_loss": float(final_metrics["Loss"]),
+                "train_f1": float(final_metrics["F1 Score"]),
+                "train_accuracy": float(final_metrics["Accuracy"]),
                 "cid": self.cid,
             },
         )
@@ -144,13 +144,18 @@ class FlowerClient(fl.client.NumPyClient):
         # Load data for this client and get trainloader
         num_workers = int(ray.get_runtime_context().get_assigned_resources()["CPU"])
 
+        if self.preferences.cross_device:
+            partition = "train"
+        else:
+            partition = config["phase"]
+
         dataset = Utils.get_dataloader(
             self.fed_dir,
             self.cid,
             batch_size=self.preferences.batch_size,
             workers=num_workers,
             dataset=self.preferences.dataset,
-            partition="train",
+            partition=partition,
         )
 
         # Send model to device
@@ -165,7 +170,6 @@ class FlowerClient(fl.client.NumPyClient):
 
         metrics = {
             "accuracy": float(metrics["Accuracy"]),
-            "max_disparity": float(metrics["max_disparity"]),
             "loss": float(metrics["Loss"]),
             "cid": self.cid,
             "f1_score": metrics["F1 Score"],
