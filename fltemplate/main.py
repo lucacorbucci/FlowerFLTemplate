@@ -1,16 +1,13 @@
 import argparse
 import logging
-import random
 import signal
 import sys
 from typing import Dict
 
 import flwr as fl
 import numpy as np
-import torch
 from Dataset.federated_dataset import FederatedDataset
 from Dataset.load_data import LoadDataset
-from Dataset.tabular_dataset import TabularDataset
 from flwr.common.typing import Scalar
 from Utils.aggregation import Aggregation
 from Utils.preferences import Preferences
@@ -112,7 +109,7 @@ if __name__ == "__main__":
         ratio_unfairness=tuple(args.ratio_unfairness)
         if args.ratio_unfairness
         else None,
-        validation=True if args.validation_size else False,
+        validation=True if args.validation_size is not None else False,
         validation_size=args.validation_size if args.validation_size else None,
         fed_dir=f"{args.dataset_path}/federated/",
         epsilon=args.epsilon,
@@ -195,7 +192,7 @@ if __name__ == "__main__":
             preferences=preferences,
             cid=cid,
             client_generator=client_generator,
-        )
+        ).to_client()
 
     # these parameters are used to configure Ray and they are dependent on
     # the machine we want to use to run the experiments
@@ -241,7 +238,7 @@ if __name__ == "__main__":
     )
     server = Server(client_manager=client_manager, strategy=strategy)
 
-    fl.simulation.start_simulation(
+    history = fl.simulation.start_simulation(
         client_fn=client_fn,
         num_clients=args.num_nodes,
         client_resources=client_resources,
