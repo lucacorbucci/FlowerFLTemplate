@@ -80,6 +80,8 @@ parser.add_argument("--project_name", type=str, default=None)
 parser.add_argument("--num_client_cpus", type=float, default=None)
 parser.add_argument("--num_client_gpus", type=float, default=None)
 
+parser.add_argument("--device", type=str, default="cuda")
+
 
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal_handler)
@@ -122,6 +124,7 @@ if __name__ == "__main__":
         sampled_training_nodes=args.sampled_training_nodes,
         sampled_validation_nodes=args.sampled_validation_nodes,
         sampled_test_nodes=args.sampled_test_nodes,
+        device=args.device,
     )
 
     Utils.seed_everything(args.seed)
@@ -188,12 +191,11 @@ if __name__ == "__main__":
     def client_fn(cid: str):
         client_generator = np.random.default_rng(seed=[args.seed, cid])
         # create a single client instance
-        if args.metric == "disparity":
-            return FlowerClient(
-                preferences=preferences,
-                cid=cid,
-                client_generator=client_generator,
-            )
+        return FlowerClient(
+            preferences=preferences,
+            cid=cid,
+            client_generator=client_generator,
+        )
 
     # these parameters are used to configure Ray and they are dependent on
     # the machine we want to use to run the experiments
