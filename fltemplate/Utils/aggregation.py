@@ -66,23 +66,15 @@ class Aggregation:
 
         return agg_metrics
 
-    def agg_metrics_train(
-        metrics: list, server_round: int, current_max_epsilon: float, fed_dir, wandb_run
-    ) -> dict:
+    def agg_metrics_train(metrics: list, server_round: int, fed_dir, wandb_run) -> dict:
         # Collect the losses logged during each epoch in each client
         total_examples = sum([n_examples for n_examples, _ in metrics])
-        analysis_dicts = []
         losses = []
         losses_with_regularization = []
-        epsilon_list = []
         accuracies = []
-        max_disparity_train = []
-
-        total_analysis_dict = {}
 
         for n_examples, node_metrics in metrics:
             losses.append(n_examples * node_metrics["train_loss"])
-            epsilon_list.append(node_metrics["epsilon"])
             accuracies.append(n_examples * node_metrics["train_accuracy"])
             client_id = node_metrics["cid"]
 
@@ -91,10 +83,6 @@ class Aggregation:
             to_be_logged = {
                 "FL Round": server_round,
             }
-
-            delta = node_metrics["delta"]
-            if delta:
-                to_be_logged[f"Delta Client {client_id}"] = delta
 
             if wandb_run:
                 wandb_run.log(
@@ -111,9 +99,6 @@ class Aggregation:
             "Train Accuracy": sum(accuracies) / total_examples,
             "Train Loss with Regularization": sum(losses_with_regularization)
             / total_examples,
-            "Training Disparity with average": sum(max_disparity_train)
-            / len(max_disparity_train),
-            "Train Epsilon": current_max_epsilon,
             "FL Round": server_round,
         }
         if wandb_run:
