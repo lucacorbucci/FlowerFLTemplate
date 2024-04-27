@@ -379,6 +379,17 @@ class SimpleClientManager(ClientManager):
                 )
                 with open(f"{self.fed_dir}/train_nodes.pkl", "wb") as f:
                     dill.dump(sampled_nodes_train, f)
+
+                counter_sampling = {}
+                for sample_list in sampled_nodes_train.values():
+                    for node in sample_list:
+                        if node not in counter_sampling:
+                            counter_sampling[str(node)] = 0
+                        counter_sampling[str(node)] += 1
+
+                with open(f"{self.fed_dir}/counter_sampling.pkl", "wb") as f:
+                    dill.dump(counter_sampling, f)
+
                 random.seed(self.seed)
 
             else:
