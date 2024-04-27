@@ -202,6 +202,7 @@ class Server:
             max_workers=self.max_workers,
             timeout=timeout,
             group_id=server_round,
+            phase="test",
         )
         log(
             DEBUG,
@@ -254,6 +255,7 @@ class Server:
             max_workers=self.max_workers,
             timeout=timeout,
             group_id=server_round,
+            phase="validation",
         )
         log(
             DEBUG,
@@ -304,6 +306,7 @@ class Server:
             timeout=timeout,
             group_id=server_round,
         )
+        print(failures)
         log(
             INFO,
             "aggregate_fit: received %s results and %s failures",
@@ -463,11 +466,19 @@ def evaluate_clients(
     max_workers: Optional[int],
     timeout: Optional[float],
     group_id: int,
+    phase: str,
 ) -> EvaluateResultsAndFailures:
     """Evaluate parameters concurrently on all selected clients."""
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         submitted_fs = {
-            executor.submit(evaluate_client, client_proxy, ins, timeout, group_id)
+            executor.submit(
+                evaluate_client,
+                client_proxy,
+                ins,
+                timeout,
+                group_id,
+                phase,
+            )
             for client_proxy, ins in client_instructions
         }
         finished_fs, _ = concurrent.futures.wait(
@@ -490,8 +501,10 @@ def evaluate_client(
     ins: EvaluateIns,
     timeout: Optional[float],
     group_id: int,
+    phase: str,
 ) -> Tuple[ClientProxy, EvaluateRes]:
     """Evaluate parameters on a single client."""
+    ins.config["phase"] = phase
     evaluate_res = client.evaluate(ins, timeout=timeout, group_id=group_id)
     return client, evaluate_res
 
@@ -553,15 +566,15 @@ def run_fl(
         num_rounds=config.num_rounds, timeout=config.round_timeout
     )
 
-    log(INFO, "")
-    log(INFO, "[SUMMARY]")
-    log(INFO, "Run finished %s rounds in %.2fs", config.num_rounds, elapsed_time)
-    for idx, line in enumerate(io.StringIO(str(hist))):
-        if idx == 0:
-            log(INFO, "%s", line.strip("\n"))
-        else:
-            log(INFO, "\t%s", line.strip("\n"))
-    log(INFO, "")
+    # log(INFO, "")
+    # log(INFO, "[SUMMARY]")
+    # log(INFO, "Run finished %s rounds in %.2fs", config.num_rounds, elapsed_time)
+    # for idx, line in enumerate(io.StringIO(str(hist))):
+    #     if idx == 0:
+    #         log(INFO, "%s", line.strip("\n"))
+    #     else:
+    #         log(INFO, "\t%s", line.strip("\n"))
+    # log(INFO, "")
 
     # Graceful shutdown
     server.disconnect_all_clients(timeout=config.round_timeout)
