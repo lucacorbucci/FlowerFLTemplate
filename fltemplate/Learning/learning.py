@@ -21,7 +21,7 @@ class Learning:
         z_list = []
 
         with torch.no_grad():
-            for _, (data, z, target, w) in enumerate(test_loader):
+            for _, (data, z, target) in enumerate(test_loader):
                 data = data.to(device)
                 target = target.long()
                 target = target.to(device)
@@ -80,7 +80,7 @@ class Learning:
             max_physical_batch_size=MAX_PHYSICAL_BATCH_SIZE,
             optimizer=optimizer,
         ) as memory_safe_data_loader:
-            for _, (data, z, target, w) in enumerate(memory_safe_data_loader):
+            for _, (data, z, target) in enumerate(memory_safe_data_loader):
                 optimizer.zero_grad()
                 data = data.to(device)
                 target = target.long()
