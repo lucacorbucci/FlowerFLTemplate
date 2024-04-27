@@ -49,3 +49,5 @@ class Preferences:
     sampled_training_nodes: float = None
     sampled_validation_nodes: float = None
     sampled_test_nodes: float = None
+
+    device: str = None
