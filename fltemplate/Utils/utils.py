@@ -1,5 +1,7 @@
 import os
 import random
+from collections import Counter, OrderedDict
+from pathlib import Path
 from typing import Any, Callable, List, Optional, Tuple
 
 import numpy as np
@@ -9,10 +11,40 @@ from opacus import PrivacyEngine
 from opacus.grad_sample import GradSampleModule
 from opacus.optimizers import DPOptimizer
 from torch.utils.data import DataLoader
+from torchvision.datasets import VisionDataset
 
 from fltemplate.Models.celeba import CelebaNet
 from fltemplate.Models.logistic_regression_net import LinearClassificationNet
 from fltemplate.Utils.preferences import Preferences
+
+
+class TorchVision_FL(VisionDataset):
+    """This is just a trimmed down version of torchvision.datasets.MNIST.
+
+    Use this class by either passing a path to a torch file (.pt)
+    containing (data, targets) or pass the data, targets directly
+    instead.
+    """
+
+    def __init__(
+        self,
+        path_to_data=None,
+        data=None,
+        targets=None,
+        transform: Optional[Callable] = None,
+    ) -> None:
+        path = path_to_data.parent if path_to_data else None
+        self.dataset_path = path.parent.parent.parent if path_to_data else None
+
+        super(TorchVision_FL, self).__init__(path, transform=transform)
+        self.transform = transform
+
+        if path_to_data:
+            # load data and targets (path_to_data points to an specific .pt file)
+            self.data, self.sensitive_features, self.targets = torch.load(path_to_data)
+        else:
+            self.data = data
+            self.targets = targets
 
 
 class Utils:
@@ -67,7 +99,7 @@ class Utils:
         elif dataset == "income":
             return LinearClassificationNet(input_size=54, output_size=2)
         elif dataset == "adult":
-            return LinearClassificationNet(input_size=54, output_size=2)
+            return LinearClassificationNet(input_size=111, output_size=2)
         else:
             raise ValueError(f"Dataset {dataset} not supported")
 
@@ -179,3 +211,59 @@ class Utils:
         )
 
         return wandb_run
+
+    @staticmethod
+    def set_params(model: torch.nn.ModuleList, params: List[np.ndarray]):
+        """Set model weights from a list of NumPy ndarrays."""
+        params_dict = zip(model.state_dict().keys(), params)
+        state_dict = OrderedDict(
+            {k: torch.from_numpy(np.copy(v)) for k, v in params_dict}
+        )
+        model.load_state_dict(state_dict, strict=True)
+
+    @staticmethod
+    def get_dataloader(
+        path_to_data: str,
+        cid: str,
+        # is_train: bool,
+        batch_size: int,
+        workers: int,
+        dataset: str,
+        partition: str = "train",
+    ):
+        """Generates trainset/valset object and returns appropiate dataloader."""
+
+        partition = (
+            "train"
+            if partition == "train"
+            else "test"
+            if partition == "test"
+            else "val"
+        )
+        dataset = Utils.get_dataset(Path(path_to_data), cid, partition, dataset)
+
+        # we use as number of workers all the cpu cores assigned to this actor
+        kwargs = {"num_workers": workers, "pin_memory": True, "drop_last": False}
+        return DataLoader(dataset, batch_size=batch_size, **kwargs)
+
+    @staticmethod
+    def get_dataset(path_to_data: Path, cid: str, partition: str, dataset: str):
+        # generate path to cid's data
+        path_to_data = path_to_data / cid / (partition + ".pt")
+        if dataset == "dutch":
+            return torch.load(path_to_data)
+        elif dataset == "adult":
+            return torch.load(path_to_data)
+        elif dataset == "dutch_unprivileged":
+            return torch.load(path_to_data)
+        elif dataset == "german":
+            return torch.load(path_to_data)
+        elif dataset == "compas":
+            return torch.load(path_to_data)
+        elif dataset == "income":
+            return torch.load(path_to_data)
+        else:
+            return TorchVision_FL(
+                path_to_data,
+                transform=Utils.get_transformation(dataset),
+            )
