@@ -6,31 +6,19 @@ from sklearn.preprocessing import MinMaxScaler
 class LoadDataset:
     def load_dataset(preferences):
         if preferences.dataset == "adult":
-            if preferences.cross_device:
-                _X, _Z, _y = LoadDataset.load_adult(preferences.dataset_path)
-            else:
-                _X_train, _Z_train, _y_train = LoadDataset.load_adult(
-                    preferences.dataset_path
-                )
-                _X_test, _Z_test, _y_test = LoadDataset.load_adult(
-                    preferences.dataset_path
-                )
-                return _X_train, _Z_train, _y_train, _X_test, _Z_test, _y_test
+            _X, _Z, _y = LoadDataset.load_adult(preferences.dataset_path)
+            return _X, _Z, _y
         else:
             raise ValueError(f"Dataset {preferences.dataset} not supported.")
 
     def load_adult(dataset_path):
         adult_feat_cols = [
-            "age",
             "workclass",
-            "fnlwgt",
             "education",
             "education-num",
             "marital-status",
             "occupation",
             "relationship",
-            "race",
-            "sex",
             "capital-gain",
             "capital-loss",
             "hours-per-week",
@@ -57,7 +45,6 @@ class LoadDataset:
             "native-country",
             "income",
         )
-
         df_adult = pd.read_csv(dataset_path + "adult.data", names=adult_columns_names)
         # df_adult = pd.DataFrame(df_adult[0]).astype("int32")
 
@@ -72,6 +59,9 @@ class LoadDataset:
         y[df_adult["income"] == " >50K"] = 1
         df_adult["income_binary"] = y
         del df_adult["income"]
+        del df_adult["race"]
+        del df_adult["sex"]
+        del df_adult["age"]
 
         metadata_adult = {
             "name": "Adult",
@@ -117,7 +107,7 @@ class LoadDataset:
         if num_sensitive_features > len(_metadata["protected_atts"]):
             num_sensitive_features = len(_metadata["protected_atts"])
         _Z = _X[_metadata["protected_atts"][:num_sensitive_features]]
-        _X = _X.drop(columns=_metadata["protected_atts"][:num_sensitive_features])
+        # _X = _X.drop(columns=_metadata["protected_atts"][:num_sensitive_features])
         # 1-hot encode and scale features
         if "dummy_cols" in _metadata.keys():
             dummy_cols = _metadata["dummy_cols"]

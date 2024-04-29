@@ -9,7 +9,13 @@ from Dataset.tabular_dataset import TabularDataset
 
 class FederatedDataset:
     @staticmethod
-    def create_federated_dataset(preferences, X, y, z, split_name):
+    def get_distribution(preferences):
+        return np.random.dirichlet(
+            preferences.num_nodes * [preferences.alpha_dirichlet], size=1
+        )
+
+    @staticmethod
+    def create_federated_dataset(preferences, X, y, z, split_name, distribution=None):
         """
 
         Args:
@@ -63,6 +69,10 @@ class FederatedDataset:
                 )
 
         elif preferences.split_approach == "non_iid":
+            if distribution is None:
+                raise ValueError(
+                    "If you want to use the non_iid split you have to provide a distribution"
+                )
             # non iid split with respect to the target
             # random shuffle the data in X, y, z
             combined_data = list(zip(X, y, z))
@@ -84,17 +94,16 @@ class FederatedDataset:
 
             to_be_sampled = []
             # create the distribution for each class
+            total_sum = 0
             for label in list_labels:
                 # For each label we want a distribution over the num_partitions
-                distribution = np.random.dirichlet(
-                    preferences.num_nodes * [preferences.alpha_dirichlet], size=1
-                )
                 # we have to sample from the group of samples that have label equal
                 # to label and not from the entire labels list.
                 selected_labels = labels[labels == label]
                 tmp_to_be_sampled = np.random.choice(
                     preferences.num_nodes, len(selected_labels), p=distribution[0]
                 )
+                total_sum += len(tmp_to_be_sampled)
                 # Inside to_be_sampled we save a counter for each label
                 # The counter is the number of samples that we want to sample for each
                 # partition
@@ -121,19 +130,19 @@ class FederatedDataset:
             assert total == len(labels)
 
             partitions_labels = {
-                node: [item.item() for item in labels[samples]]
-                for node, samples in partitions_index.items()
+                node: np.array(y)[indexes] for node, indexes in partitions_index.items()
             }
 
             partitions_data = {
-                node: np.array(X)[samples] for node, indexes in partitions_index.items()
+                node: np.array(X)[indexes] for node, indexes in partitions_index.items()
             }
 
             partitions_sensitive_values = {
-                node: np.array(z)[samples] for node, indexes in partitions_index.items()
+                node: np.array(z)[indexes] for node, indexes in partitions_index.items()
             }
 
             nodes = []
+            used_samples = 0
             for i in range(preferences.num_nodes):
                 nodes.append(
                     {
@@ -142,10 +151,16 @@ class FederatedDataset:
                         "z": np.array(partitions_sensitive_values[f"node_{i}"]),
                     }
                 )
-
+                assert len(np.array(partitions_data[f"node_{i}"])) == len(
+                    np.array(partitions_labels[f"node_{i}"])
+                )
+                assert len(np.array(partitions_data[f"node_{i}"])) == len(
+                    np.array(partitions_sensitive_values[f"node_{i}"])
+                )
+                used_samples += len(np.array(partitions_data[f"node_{i}"]))
             # remove the old files in the data folder
-            if split_name == "train":
-                os.system(f"rm -rf {preferences.dataset_path}/federated/*")
+            # if split_name == "train":
+            #     os.system(f"rm -rf {preferences.dataset_path}/federated/*")
             for client_name, client in enumerate(nodes):
                 # Append 1 to each samples
                 custom_dataset = TabularDataset(
