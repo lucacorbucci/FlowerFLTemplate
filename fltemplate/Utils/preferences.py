@@ -51,3 +51,6 @@ class Preferences:
     sampled_test_nodes: float = None
 
     device: str = None
+
+    save_local_models: bool = False
+    save_aggregated_model: bool = False

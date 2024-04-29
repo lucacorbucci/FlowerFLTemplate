@@ -79,6 +79,9 @@ parser.add_argument("--num_client_gpus", type=float, default=None)
 
 parser.add_argument("--device", type=str, default="cuda")
 
+parser.add_argument("--save_local_models", type=bool, default=False)
+parser.add_argument("--save_aggregated_model", type=bool, default=False)
+
 
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal_handler)
@@ -122,6 +125,8 @@ if __name__ == "__main__":
         sampled_validation_nodes=args.sampled_validation_nodes,
         sampled_test_nodes=args.sampled_test_nodes,
         device=args.device,
+        save_aggregated_model=args.save_aggregated_model,
+        save_local_models=args.save_local_models,
     )
 
     Utils.seed_everything(args.seed)
@@ -134,17 +139,27 @@ if __name__ == "__main__":
             raise ValueError("Only cross silo is supported")
         else:
             X, Z, y, X_test, Z_test, y_test = LoadDataset.load_dataset(preferences)
+            distribution = None
+            if preferences.split_approach == "non_iid":
+                distribution = FederatedDataset.get_distribution(
+                    preferences=preferences
+                )
             if preferences.validation:
                 X, y, z, X_val, y_val, z_val = Utils.train_validation_split(
-                    X, y, Z, preferences
+                    X,
+                    y,
+                    Z,
+                    preferences,
                 )
                 FederatedDataset.create_federated_dataset(
-                    preferences, X_val, y_val, z_val, "validation"
+                    preferences, X_val, y_val, z_val, "validation", distribution
                 )
-            FederatedDataset.create_federated_dataset(preferences, X, y, Z, "train")
+            FederatedDataset.create_federated_dataset(
+                preferences, X, y, Z, "train", distribution
+            )
 
             FederatedDataset.create_federated_dataset(
-                preferences, X_test, y_test, Z_test, "test"
+                preferences, X_test, y_test, Z_test, "test", distribution
             )
     else:
         raise ValueError("Only tabular datasets are supported")

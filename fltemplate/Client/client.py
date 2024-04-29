@@ -2,11 +2,15 @@ import gc
 import logging
 import os
 import warnings
+from collections import OrderedDict
+from logging import INFO
 
 import dill
 import flwr as fl
 import numpy as np
 import ray
+import torch
+from flwr.common.logger import log
 from opacus import PrivacyEngine
 
 from fltemplate.Learning.learning import Learning
@@ -121,6 +125,34 @@ class FlowerClient(fl.client.NumPyClient):
             test_loader=train_loader,
             device=self.preferences.device,
         )
+
+        if self.preferences.save_local_models:
+            log(INFO, f"Saving local model of client {self.cid}")
+
+            # Convert `List[np.ndarray]` to PyTorch`state_dict`
+            params_dict = zip(
+                private_net._module.state_dict().keys(), Utils.get_params(private_net)
+            )
+            state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
+            model = Utils.get_model(
+                self.preferences.dataset, device=self.preferences.device
+            )
+            model.load_state_dict(state_dict, strict=True)
+
+            if not os.path.exists(f"{self.preferences.dataset_path}/models/{self.cid}"):
+                os.makedirs(
+                    f"{self.preferences.dataset_path}/models/{self.cid}", exist_ok=True
+                )
+            # Save the model
+            torch.save(
+                model,
+                f"{self.preferences.dataset_path}/models/{self.cid}/model_node_{self.cid}_round_{current_fl_round}.pth",
+            )
+
+            torch.save(
+                model.state_dict(),
+                f"{self.preferences.dataset_path}/models/{self.cid}/model_node_{self.cid}_round_{current_fl_round}_state_dict.pth",
+            )
 
         del private_net
         gc.collect()

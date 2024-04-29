@@ -17,9 +17,14 @@
 Paper: https://arxiv.org/abs/1602.05629
 """
 
-from logging import WARNING
+import os
+from collections import OrderedDict
+from logging import INFO, WARNING
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
+import flwr as fl
+import numpy as np
+import torch
 from flwr.common import (
     EvaluateIns,
     EvaluateRes,
@@ -39,6 +44,7 @@ from flwr.server.strategy.aggregate import aggregate, weighted_loss_avg
 from flwr.server.strategy.strategy import Strategy
 
 from fltemplate.Utils.preferences import Preferences
+from fltemplate.Utils.utils import Utils
 
 WARNING_MIN_AVAILABLE_CLIENTS_TOO_LOW = """
 Setting `min_available_clients` lower than `min_fit_clients` or
@@ -299,6 +305,34 @@ class FedAvg(Strategy):
             )
         elif server_round == 1:  # Only log this warning once
             log(WARNING, "No fit_metrics_aggregation_fn provided")
+
+        if self.preferences.save_aggregated_model and parameters_aggregated is not None:
+            log(INFO, f"Saving round {server_round} aggregated_parameters...")
+
+            # Convert `Parameters` to `List[np.ndarray]`
+            aggregated_ndarrays: List[np.ndarray] = fl.common.parameters_to_ndarrays(
+                parameters_aggregated
+            )
+            model = Utils.get_model(
+                self.preferences.dataset, device=self.preferences.device
+            )
+            # Convert `List[np.ndarray]` to PyTorch`state_dict`
+            params_dict = zip(model.state_dict().keys(), aggregated_ndarrays)
+            state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
+            model.load_state_dict(state_dict, strict=True)
+
+            if not os.path.exists(f"{self.preferences.dataset_path}/models/"):
+                os.makedirs(f"{self.preferences.dataset_path}/models", exist_ok=True)
+            # Save the model
+            torch.save(
+                model,
+                f"{self.preferences.dataset_path}/models/aggregated_model_round_{server_round}.pth",
+            )
+
+            torch.save(
+                model.state_dict(),
+                f"{self.preferences.dataset_path}/models/aggregated_model_round_{server_round}_state_dict.pth",
+            )
 
         return parameters_aggregated, metrics_aggregated
 
