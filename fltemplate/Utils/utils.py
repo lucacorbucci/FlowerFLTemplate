@@ -60,18 +60,18 @@ class Utils:
             torch.backends.cudnn.deterministic = True
 
     @staticmethod
-    def train_validation_split(X, y, z, preferences):
+    def split_train(X, y, z, size):
         combined_data = list(zip(X, y, z))
         random.shuffle(combined_data)
         X, y, z = zip(*combined_data)
-        X_val = X[: int(preferences.validation_size * len(X))]
-        y_val = y[: int(preferences.validation_size * len(y))]
-        z_val = z[: int(preferences.validation_size * len(z))]
-        X = X[int(preferences.validation_size * len(X)) :]
-        y = y[int(preferences.validation_size * len(y)) :]
-        z = z[int(preferences.validation_size * len(z)) :]
+        X_split = X[: int(size * len(X))]
+        y_split = y[: int(size * len(y))]
+        z_split = z[: int(size * len(z))]
+        X = X[int(size * len(X)) :]
+        y = y[int(size * len(y)) :]
+        z = z[int(size * len(z)) :]
 
-        return X, y, z, X_val, y_val, z_val
+        return X, y, z, X_split, y_split, z_split
 
     @staticmethod
     def get_model(
@@ -99,7 +99,7 @@ class Utils:
         elif dataset == "income":
             return LinearClassificationNet(input_size=54, output_size=2)
         elif dataset == "adult":
-            return LinearClassificationNet(input_size=111, output_size=2)
+            return LinearClassificationNet(input_size=103, output_size=2)
         else:
             raise ValueError(f"Dataset {dataset} not supported")
 
@@ -227,7 +227,7 @@ class Utils:
         dataset = Utils.get_dataset(Path(path_to_data), cid, partition, dataset)
 
         # we use as number of workers all the cpu cores assigned to this actor
-        kwargs = {"num_workers": workers, "pin_memory": True, "drop_last": False}
+        kwargs = {"num_workers": 0, "pin_memory": True, "drop_last": False}
         return DataLoader(dataset, batch_size=batch_size, **kwargs)
 
     @staticmethod
