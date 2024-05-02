@@ -53,6 +53,7 @@ parser.add_argument(
     "--ratio_unfairness", type=float, default=None
 )  # how much we want to unbalance the dataset on the unfair nodes
 parser.add_argument("--validation_size", type=float, default=None)
+parser.add_argument("--test_size", type=float, default=None)
 
 # Parameters for privacy-preserving trainign
 parser.add_argument("--epsilon", type=float, default=None)
@@ -65,7 +66,7 @@ parser.add_argument("--fraction_test_nodes", type=float, default=None)
 
 # Percentage of nodes to sample for training, validation and test
 parser.add_argument("--sampled_training_nodes", type=float, default=1.0)
-parser.add_argument("--sampled_validation_nodes", type=float, default=None)
+parser.add_argument("--sampled_validation_nodes", type=float, default=0)
 parser.add_argument("--sampled_test_nodes", type=float, default=1.0)
 
 # Parameters for the wandb logging
@@ -127,6 +128,7 @@ if __name__ == "__main__":
         device=args.device,
         save_aggregated_model=args.save_aggregated_model,
         save_local_models=args.save_local_models,
+        test_size=args.test_size,
     )
 
     Utils.seed_everything(args.seed)
@@ -135,31 +137,38 @@ if __name__ == "__main__":
 
     if preferences.tabular:
         if preferences.cross_device:
-            X, Z, y = LoadDataset.load_dataset(preferences)
+            X, Z, Y = LoadDataset.load_dataset(preferences)
             raise ValueError("Only cross silo is supported")
         else:
-            X, Z, y, X_test, Z_test, y_test = LoadDataset.load_dataset(preferences)
+            X, Z, Y = LoadDataset.load_dataset(preferences)
+            X, Y, Z, X_test, y_test, z_test = Utils.split_train(
+                X,
+                Y,
+                Z,
+                preferences.test_size,
+            )
             distribution = None
             if preferences.split_approach == "non_iid":
                 distribution = FederatedDataset.get_distribution(
                     preferences=preferences
                 )
             if preferences.validation:
-                X, y, z, X_val, y_val, z_val = Utils.train_validation_split(
+                print("Creating Validation Set")
+                X, Y, Z, X_val, y_val, z_val = Utils.split_train(
                     X,
-                    y,
+                    Y,
                     Z,
-                    preferences,
+                    preferences.validation_size,
                 )
                 FederatedDataset.create_federated_dataset(
                     preferences, X_val, y_val, z_val, "validation", distribution
                 )
             FederatedDataset.create_federated_dataset(
-                preferences, X, y, Z, "train", distribution
+                preferences, X, Y, Z, "train", distribution
             )
 
             FederatedDataset.create_federated_dataset(
-                preferences, X_test, y_test, Z_test, "test", distribution
+                preferences, X_test, y_test, z_test, "test", distribution
             )
     else:
         raise ValueError("Only tabular datasets are supported")
