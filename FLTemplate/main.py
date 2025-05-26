@@ -1,3 +1,7 @@
+import argparse
+import signal
+import sys
+
 from Client.client import FlowerClient
 from ClientManager.client_manager import SimpleClientManager
 from flwr.client import ClientApp
@@ -12,6 +16,14 @@ from Models.simple_cnn import Net
 from Server.server import Server
 from Utils.dataset import get_mnist_dataloaders
 from Utils.utils import get_params, weighted_average
+
+
+def signal_handler(sig, frame):
+    print("Gracefully stopping your experiment! Keep calm!")
+    global wandb_run
+    if wandb_run:
+        wandb_run.finish()
+    sys.exit(0)
 
 
 def client_fn(context: Context):
@@ -52,7 +64,7 @@ def server_fn(context: Context):
 
 
 def prepare_data():
-    partitioner = IidPartitioner(num_partitions=NUM_PARTITIONS)
+    partitioner = IidPartitioner(num_partitions=num_clients)
     # Let's partition the "train" split of the MNIST dataset
     # The MNIST dataset will be downloaded if it hasn't been already
     fds = FederatedDataset(dataset="ylecun/mnist", partitioners={"train": partitioner})
@@ -74,20 +86,27 @@ def prepare_data():
     return partitioner, fds
 
 
-NUM_PARTITIONS = 100
+parser = argparse.ArgumentParser(description="Flower Simulation with PyTorch")
+parser.add_argument("--num_clients", type=int, default=None)
+parser.add_argument("--num_rounds", type=int, default=None)
 
+if __name__ == "__main__":
+    signal.signal(signal.SIGINT, signal_handler)
+    # remove files in tmp/ray
+    args = parser.parse_args()
 
-num_rounds = 5
+    num_clients = args.num_clients
+    num_rounds = args.num_rounds
 
-# Create your ServerApp
-client_manager = SimpleClientManager()
+    # Create your ServerApp
+    client_manager = SimpleClientManager()
 
-partitioner, fds = prepare_data()
+    partitioner, fds = prepare_data()
 
-# Create your ServerApp
-server_app = ServerApp(server_fn=server_fn)
+    # Create your ServerApp
+    server_app = ServerApp(server_fn=server_fn)
 
-# Concstruct the ClientApp passing the client generation function
-client_app = ClientApp(client_fn=client_fn)
+    # Concstruct the ClientApp passing the client generation function
+    client_app = ClientApp(client_fn=client_fn)
 
-run_simulation(server_app=server_app, client_app=client_app, num_supernodes=NUM_PARTITIONS)
+    run_simulation(server_app=server_app, client_app=client_app, num_supernodes=num_clients)
