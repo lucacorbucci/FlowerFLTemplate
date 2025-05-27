@@ -7,22 +7,23 @@ from ClientManager.client_manager import SimpleClientManager
 from flwr.client import ClientApp
 from flwr.common import Context, ndarrays_to_parameters
 from flwr.server import ServerApp, ServerAppComponents, ServerConfig
-from flwr.server.strategy import FedAvg
 from flwr.simulation import run_simulation
 from flwr_datasets import FederatedDataset
 from flwr_datasets.partitioner import IidPartitioner
 from flwr_datasets.visualization import plot_label_distributions
 from Models.simple_cnn import Net
 from Server.server import Server
+from Strategy.fed_avg import FedAvg
 from Utils.dataset import get_mnist_dataloaders
+from Utils.preferences import Preferences
 from Utils.utils import get_params, weighted_average
 
 
 def signal_handler(sig, frame):
     print("Gracefully stopping your experiment! Keep calm!")
-    global wandb_run
-    if wandb_run:
-        wandb_run.finish()
+    # global wandb_run
+    # if wandb_run:
+    # wandb_run.finish()
     sys.exit(0)
 
 
@@ -89,6 +90,17 @@ def prepare_data():
 parser = argparse.ArgumentParser(description="Flower Simulation with PyTorch")
 parser.add_argument("--num_clients", type=int, default=None)
 parser.add_argument("--num_rounds", type=int, default=None)
+parser.add_argument("--num_test_nodes", type=int, default=None)
+parser.add_argument("--num_validation_nodes", type=int, default=None)
+parser.add_argument("--num_train_nodes", type=int, default=None)
+parser.add_argument("--sampled_validation_nodes_per_round", type=int, default=None)
+parser.add_argument("--sampled_train_nodes_per_round", type=int, default=None)
+parser.add_argument("--sampled_test_nodes_per_round", type=int, default=None)
+parser.add_argument("--num_epochs", type=int, default=None)
+parser.add_argument("--seed", type=int, default=None)
+parser.add_argument("--node_shuffle_seed", type=int, default=None)
+parser.add_argument("--cross_device", type=bool, default=None)
+parser.add_argument("--fed_dir", type=str, default=None)
 
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal_handler)
@@ -98,8 +110,24 @@ if __name__ == "__main__":
     num_clients = args.num_clients
     num_rounds = args.num_rounds
 
+    preferences = Preferences(
+        num_clients=num_clients,
+        num_rounds=num_rounds,
+        cross_device=args.cross_device,
+        num_test_nodes=args.num_test_nodes,
+        num_validation_nodes=args.num_validation_nodes,
+        num_train_nodes=args.num_train_nodes,
+        num_epochs=args.num_epochs,
+        sampled_validation_nodes_per_round=args.sampled_validation_nodes_per_round,
+        sampled_train_nodes_per_round=args.sampled_train_nodes_per_round,
+        sampled_test_nodes_per_round=args.sampled_test_nodes_per_round,
+        seed=args.seed,
+        node_shuffle_seed=args.node_shuffle_seed,
+        fed_dir=args.fed_dir,
+    )
+
     # Create your ServerApp
-    client_manager = SimpleClientManager()
+    client_manager = SimpleClientManager(preferences=preferences)
 
     partitioner, fds = prepare_data()
 
