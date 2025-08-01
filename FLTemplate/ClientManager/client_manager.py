@@ -31,6 +31,9 @@ class SimpleClientManager(ClientManager):
         self.num_round_train = 0
         self.num_round_validation = 0
         self.num_round_test = 0
+        self.training_clients_list: List[str] = []
+        self.validation_clients_list: List[str] = []
+        self.test_clients_list: List[str] = []
 
     def __len__(self) -> int:
         """Return the number of available clients.
@@ -76,6 +79,20 @@ class SimpleClientManager(ClientManager):
         """
         with self._cv:
             return self._cv.wait_for(lambda: len(self.clients) >= num_clients, timeout=timeout)
+
+    def pre_sample_clients(self, fraction, client_list):
+        sampled_nodes = {}
+        nodes_to_sample = int(fraction * len(client_list))
+        for fl_round in range(self.preferences.num_rounds):
+            if fraction == 1.0:
+                start = 0
+                end = len(client_list)
+            else:
+                start = fl_round * nodes_to_sample % len(client_list)
+                end = (fl_round * nodes_to_sample + nodes_to_sample) % len(client_list)
+
+            sampled_nodes[fl_round] = client_list[start:end]
+        return sampled_nodes
 
     def sample_clients_per_round(self, nodes_to_sample: int, client_list: List[str]) -> Dict[int, List[str]]:
         """Sample clients for each round.
@@ -168,7 +185,7 @@ class SimpleClientManager(ClientManager):
                 self.training_clients_list = remaining_nodes
 
                 sampled_nodes_train = self.sample_clients_per_round(
-                    nodes_to_sample=self.preferences.sampled_train_nodes_per_round,
+                    nodes_to_sample=self.preferences.sampled_training_nodes_per_round,
                     client_list=self.training_clients_list,
                 )
                 with open(f"{self.preferences.fed_dir}/train_nodes_per_round.pkl", "wb") as f:
@@ -190,31 +207,41 @@ class SimpleClientManager(ClientManager):
             else:
                 random.seed(self.preferences.node_shuffle_seed)
                 random.shuffle(self.clients_list)
+
+                print("Clients list: ", self.clients_list)
                 # In this case I'm in the cross-silo case
                 # This means that each node has training, validation and test data
                 # so each node could be used for training, validation and testing
-                if self.sampled_validation_nodes:
+                if self.preferences.sampled_validation_nodes_per_round:
+                    print("Sampling validation nodes per round: ", self.preferences.sampled_validation_nodes_per_round)
                     sampled_nodes_validation = self.pre_sample_clients(
-                        fraction=self.sampled_validation_nodes,
+                        fraction=self.preferences.sampled_validation_nodes_per_round,
                         client_list=self.clients_list,
                     )
-                    with open(f"{self.preferences.fed_dir}/validation_nodes.pkl", "wb") as f:
+                    with open(f"{self.preferences.fed_dir}/validation_nodes_per_round.pkl", "wb") as f:
                         dill.dump(sampled_nodes_validation, f)
 
+                        print("Validation nodes: ", sampled_nodes_validation)
+                else:
+                    print("No validation nodes sampled, using all clients for training and testing.")
+
                 sampled_nodes_test = self.pre_sample_clients(
-                    fraction=self.sampled_test_nodes,
+                    fraction=self.preferences.sampled_test_nodes_per_round,
                     client_list=self.clients_list,
                 )
 
-                with open(f"{self.preferences.fed_dir}/test_nodes.pkl", "wb") as f:
+                with open(f"{self.preferences.fed_dir}/test_nodes_per_round.pkl", "wb") as f:
                     dill.dump(sampled_nodes_test, f)
+                    print("Test nodes: ", sampled_nodes_test)
 
                 sampled_nodes_train = self.pre_sample_clients(
-                    fraction=self.sampled_training_nodes,
+                    fraction=self.preferences.sampled_training_nodes_per_round,
                     client_list=self.clients_list,
                 )
-                with open(f"{self.preferences.fed_dir}/train_nodes.pkl", "wb") as f:
+                with open(f"{self.preferences.fed_dir}/train_nodes_per_round.pkl", "wb") as f:
                     dill.dump(sampled_nodes_train, f)
+
+                print("Train nodes: ", sampled_nodes_train)
 
                 counter_sampling = {}
                 for sample_list in sampled_nodes_train.values():

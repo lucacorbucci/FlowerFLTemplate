@@ -37,6 +37,7 @@ from flwr.server.client_manager import ClientManager
 from flwr.server.client_proxy import ClientProxy
 from flwr.server.strategy.aggregate import aggregate, aggregate_inplace, weighted_loss_avg
 from flwr.server.strategy.strategy import Strategy
+from Utils.preferences import Preferences
 
 WARNING_MIN_AVAILABLE_CLIENTS_TOO_LOW = """
 Setting `min_available_clients` lower than `min_fit_clients` or
@@ -95,6 +96,7 @@ class FedAvg(Strategy):
         min_fit_clients: int = 2,
         min_evaluate_clients: int = 2,
         min_available_clients: int = 2,
+        preferences: Preferences,
         evaluate_fn: Optional[
             Callable[
                 [int, NDArrays, dict[str, Scalar]],
@@ -107,7 +109,9 @@ class FedAvg(Strategy):
         initial_parameters: Optional[Parameters] = None,
         fit_metrics_aggregation_fn: Optional[MetricsAggregationFn] = None,
         evaluate_metrics_aggregation_fn: Optional[MetricsAggregationFn] = None,
+        test_metrics_aggregation_fn: Optional[MetricsAggregationFn] = None,
         inplace: bool = True,
+        wandb_run=None,
     ) -> None:
         super().__init__()
 
@@ -127,6 +131,9 @@ class FedAvg(Strategy):
         self.fit_metrics_aggregation_fn = fit_metrics_aggregation_fn
         self.evaluate_metrics_aggregation_fn = evaluate_metrics_aggregation_fn
         self.inplace = inplace
+        self.test_metrics_aggregation_fn = test_metrics_aggregation_fn
+        self.wandb_run = wandb_run
+        self.fed_dir = preferences.fed_dir
 
     def __repr__(self) -> str:
         """Compute a string representation of the strategy."""
@@ -263,7 +270,12 @@ class FedAvg(Strategy):
         metrics_aggregated = {}
         if self.fit_metrics_aggregation_fn:
             fit_metrics = [(res.num_examples, res.metrics) for _, res in results]
-            metrics_aggregated = self.fit_metrics_aggregation_fn(fit_metrics)
+            metrics_aggregated = self.fit_metrics_aggregation_fn(
+                metrics=fit_metrics,
+                server_round=server_round,
+                wandb_run=self.wandb_run,
+                fed_dir=self.fed_dir,
+            )
         elif server_round == 1:  # Only log this warning once
             log(WARNING, "No fit_metrics_aggregation_fn provided")
 
@@ -291,7 +303,9 @@ class FedAvg(Strategy):
         metrics_aggregated = {}
         if self.evaluate_metrics_aggregation_fn:
             eval_metrics = [(res.num_examples, res.metrics) for _, res in results]
-            metrics_aggregated = self.evaluate_metrics_aggregation_fn(eval_metrics)
+            metrics_aggregated = self.evaluate_metrics_aggregation_fn(
+                metrics=eval_metrics, server_round=server_round, wandb_run=self.wandb_run
+            )
         elif server_round == 1:  # Only log this warning once
             log(WARNING, "No evaluate_metrics_aggregation_fn provided")
 
@@ -320,9 +334,9 @@ class FedAvg(Strategy):
         if self.test_metrics_aggregation_fn:
             eval_metrics = [(res.num_examples, res.metrics) for _, res in results]
             metrics_aggregated = self.test_metrics_aggregation_fn(
-                eval_metrics,
-                server_round,
-                self.wandb_run,
+                metrics=eval_metrics,
+                server_round=server_round,
+                wandb_run=self.wandb_run,
             )
         elif server_round == 1:  # Only log this warning once
             log(WARNING, "No test_metrics_aggregation_fn provided")

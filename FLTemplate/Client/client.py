@@ -2,12 +2,12 @@ from collections import OrderedDict
 from typing import Dict, Tuple
 
 import torch
-from flwr.common import NDArrays, Scalar
 from flwr.client import NumPyClient
+from flwr.common import NDArrays, Scalar
+from Models.models import LinearClassificationNet, Net
+from Training.training import test, train
 from Utils.utils import get_params, set_params
 
-from Models.simple_cnn import Net
-from Training.training import train, test
 
 class FlowerClient(NumPyClient):
     def __init__(self, trainloader, valloader) -> None:
@@ -15,7 +15,7 @@ class FlowerClient(NumPyClient):
 
         self.trainloader = trainloader
         self.valloader = valloader
-        self.model = Net(num_classes=10)
+        self.model = LinearClassificationNet(input_size=12, output_size=2)
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     def fit(self, parameters, config):
@@ -30,10 +30,10 @@ class FlowerClient(NumPyClient):
         optim = torch.optim.SGD(self.model.parameters(), lr=0.01, momentum=0.9)
 
         # do local training (call same function as centralised setting)
-        train(self.model, self.trainloader, optim, self.device)
+        loss, accuracy = train(self.model, self.trainloader, optim, self.device)
 
         # return the model parameters to the server as well as extra info (number of training examples in this case)
-        return get_params(self.model), len(self.trainloader), {}
+        return get_params(self.model), len(self.trainloader), {"accuracy": accuracy, "loss": loss}
 
     def evaluate(self, parameters: NDArrays, config: Dict[str, Scalar]):
         """Evaluate the model sent by the server on this client's
@@ -43,7 +43,8 @@ class FlowerClient(NumPyClient):
         # do local evaluation (call same function as centralised setting)
         loss, accuracy = test(self.model, self.valloader, self.device)
         # send statistics back to the server
-        return float(loss), len(self.valloader), {"accuracy": accuracy}
+        print(f"Client {config['client_id']} - Loss: {loss:.4f}, Accuracy: {accuracy:.2f}")
+        return float(loss), len(self.valloader), {"accuracy": accuracy, "loss": loss}
 
 
 # Two auxhiliary functions to set and extract parameters of a model

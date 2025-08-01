@@ -22,6 +22,7 @@ from flwr.server.client_proxy import ClientProxy
 from flwr.server.history import History
 from flwr.server.server_config import ServerConfig
 from flwr.server.strategy import FedAvg, Strategy
+from Utils.preferences import Preferences
 
 FitResultsAndFailures = tuple[
     list[tuple[ClientProxy, FitRes]],
@@ -44,12 +45,14 @@ class Server:
         self,
         *,
         client_manager: ClientManager,
+        preferences: Preferences,
         strategy: Optional[Strategy] = None,
     ) -> None:
         self._client_manager: ClientManager = client_manager
         self.parameters: Parameters = Parameters(tensors=[], tensor_type="numpy.ndarray")
         self.strategy: Strategy = strategy if strategy is not None else FedAvg()
         self.max_workers: Optional[int] = None
+        self.preferences = preferences
 
     def set_max_workers(self, max_workers: Optional[int]) -> None:
         """Set the max_workers used by ThreadPoolExecutor."""
@@ -118,19 +121,20 @@ class Server:
                 history.add_metrics_centralized(server_round=current_round, metrics=metrics_cen)
 
             # Evaluate model on a sample of available clients
-            res_fed = self.evaluate_round(server_round=current_round, timeout=timeout)
-            if res_fed is not None:
-                loss_fed, evaluate_metrics_fed, _ = res_fed
-                if loss_fed is not None:
-                    history.add_loss_distributed(server_round=current_round, loss=loss_fed)
-                    history.add_metrics_distributed(server_round=current_round, metrics=evaluate_metrics_fed)
-
-            res_fed = self.test_round(server_round=current_round, timeout=timeout)
-            if res_fed is not None:
-                loss_fed, evaluate_metrics_fed, _ = res_fed
-                if loss_fed is not None:
-                    history.add_loss_distributed(server_round=current_round, loss=loss_fed)
-                    history.add_metrics_distributed(server_round=current_round, metrics=evaluate_metrics_fed)
+            if self.preferences.sweep:
+                res_fed = self.evaluate_round(server_round=current_round, timeout=timeout)
+                if res_fed is not None:
+                    loss_fed, evaluate_metrics_fed, _ = res_fed
+                    if loss_fed is not None:
+                        history.add_loss_distributed(server_round=current_round, loss=loss_fed)
+                        history.add_metrics_distributed(server_round=current_round, metrics=evaluate_metrics_fed)
+            else:
+                res_fed = self.test_round(server_round=current_round, timeout=timeout)
+                if res_fed is not None:
+                    loss_fed, evaluate_metrics_fed, _ = res_fed
+                    if loss_fed is not None:
+                        history.add_loss_distributed(server_round=current_round, loss=loss_fed)
+                        history.add_metrics_distributed(server_round=current_round, metrics=evaluate_metrics_fed)
 
         # Bookkeeping
         end_time = timeit.default_timer()
