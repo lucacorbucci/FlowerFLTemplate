@@ -67,7 +67,7 @@ def download_mnist(data_root='../data/'):
     """
     print("Starting download of MNIST dataset...")
     # Download the training and testing datasets
-    transformer = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))])
+    transformer = transforms.ToTensor()
     mnist_train = torchvision.datasets.MNIST("../data", train=True, download=True, transform=transformer)
     mnist_test = torchvision.datasets.MNIST("../data", train=False, download=True, transform=transformer)
 
@@ -113,7 +113,7 @@ def prepare_mnist(partition):
         ]))
     trainloader = DataLoader(
             train_dataset,
-            batch_size=32,
+            batch_size=128,
             shuffle=True
         )
     
@@ -131,9 +131,9 @@ def prepare_mnist_for_cross_silo(preferences: Preferences, partition):
         val = partition_loader_train_val["test"]
 
         trainloader = prepare_mnist(train)
-        val_loader = prepare_mnist(val)
+        valloader = prepare_mnist(val)
 
-        return FlowerClient(trainloader=trainloader, valloader=val_loader, preferences=preferences).to_client()
+        return FlowerClient(trainloader=trainloader, valloader=valloader, preferences=preferences).to_client()
     else:
         print("[Preparing data for cross-silo...]")
 
@@ -142,6 +142,6 @@ def prepare_mnist_for_cross_silo(preferences: Preferences, partition):
 
 
         trainloader = prepare_mnist(train)
-        test_loader = prepare_mnist(test)
+        testloader = prepare_mnist(test)
 
-        return FlowerClient(trainloader=trainloader, valloader=test_loader, preferences=preferences).to_client()
+        return FlowerClient(trainloader=trainloader, valloader=testloader, preferences=preferences).to_client()

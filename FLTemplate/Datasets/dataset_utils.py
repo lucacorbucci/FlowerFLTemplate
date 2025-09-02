@@ -47,7 +47,7 @@ def prepare_data_for_cross_device(context: Context, partition, preferences: Pref
             )
         trainloader = DataLoader(train_dataset, batch_size=32, shuffle=True)
     elif preferences.dataset_name == "mnist":
-        train_loader = prepare_mnist(partition)
+        trainloader = prepare_mnist(partition)
     else:
         raise ValueError(f"Unsupported dataset: {preferences.dataset_name}")
 

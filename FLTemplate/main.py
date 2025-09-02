@@ -35,11 +35,8 @@ def client_fn(context: Context):
 
     if preferences.cross_device:
         return prepare_data_for_cross_device(context, partition, preferences)
-    elif not preferences.cross_device:
-        return prepare_data_for_cross_silo(context, partition, preferences)
-    else:
-        raise ValueError("Unsupported FL setting")
-    return None # to satisfy the type checker
+
+    return prepare_data_for_cross_silo(context, partition, preferences)
 
 def server_fn(context: Context):
     # instantiate the model

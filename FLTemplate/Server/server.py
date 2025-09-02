@@ -169,7 +169,6 @@ class Server:
             max_workers=self.max_workers,
             timeout=timeout,
             group_id=server_round,
-            phase="test",
         )
         log(
             INFO,
@@ -177,6 +176,7 @@ class Server:
             len(results),
             len(failures),
         )
+        log(INFO, "Failures: %s", failures)
 
         # Aggregate the evaluation results
         aggregated_result: tuple[
@@ -215,7 +215,6 @@ class Server:
             max_workers=self.max_workers,
             timeout=timeout,
             group_id=server_round,
-            phase="validation",
         )
         log(
             INFO,
@@ -417,12 +416,12 @@ def evaluate_clients(
     max_workers: Optional[int],
     timeout: Optional[float],
     group_id: int,
-    phase: str,
+    # phase: str,
 ) -> EvaluateResultsAndFailures:
     """Evaluate parameters concurrently on all selected clients."""
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         submitted_fs = {
-            executor.submit(evaluate_client, client_proxy, ins, timeout, group_id, phase)
+            executor.submit(evaluate_client, client_proxy, ins, timeout, group_id)
             for client_proxy, ins in client_instructions
         }
         finished_fs, _ = concurrent.futures.wait(
@@ -443,6 +442,7 @@ def evaluate_client(
     ins: EvaluateIns,
     timeout: Optional[float],
     group_id: int,
+    # phase: str,
 ) -> tuple[ClientProxy, EvaluateRes]:
     """Evaluate parameters on a single client."""
     evaluate_res = client.evaluate(ins, timeout=timeout, group_id=group_id)

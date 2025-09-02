@@ -31,15 +31,18 @@ def test(net, testloader, device):
     correct, loss = 0, 0.0
     net.to(device)
     net.eval()
+    losses = 0.0
+
     with torch.no_grad():
         for sample, _, label in testloader:
             images, labels = sample.to(device), label.to(device)
             outputs = net(images)
-            loss += criterion(outputs, labels.long()).item()
+            loss = criterion(outputs, labels.long())
             _, predicted = torch.max(outputs.data, 1)
             correct += (predicted == labels).sum().item()
+            losses += loss.item()
+
+    loss = torch.tensor(losses / len(testloader), device=device)
     accuracy = correct / len(testloader.dataset)
-    print(
-        f"Test set: Average loss: {loss / len(testloader):.4f}, Accuracy: {correct}/{len(testloader.dataset)} ({100.0 * accuracy:.2f}%)"
-    )
-    return float(loss), accuracy
+    print(f"Test set: Average loss: {loss.item():.4f}, Accuracy: {accuracy:.2f}")
+    return loss.item(), accuracy

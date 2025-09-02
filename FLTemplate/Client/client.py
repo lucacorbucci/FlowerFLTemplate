@@ -44,7 +44,7 @@ class FlowerClient(NumPyClient):
         # do local evaluation (call same function as centralised setting)
         loss, accuracy = test(self.model, self.valloader, self.device)
         # send statistics back to the server
-        # print(f"Client {config['client_id']} - Loss: {loss:.4f}, Accuracy: {accuracy:.2f}")
+        # print(f"Client - Loss: {loss:.4f}, Accuracy: {accuracy:.2f}")
         return float(loss), len(self.valloader), {"accuracy": accuracy, "loss": loss}
 
 
