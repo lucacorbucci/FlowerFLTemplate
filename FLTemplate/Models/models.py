@@ -22,7 +22,7 @@ def get_model(
     if dataset == "celeba":
         return CelebaNet()
     elif dataset == "dutch":
-        return LinearClassificationNet(input_size=11, output_size=2)
+        return LinearClassificationNet(input_size=12, output_size=2)
     elif dataset == "income":
         return LinearClassificationNet(input_size=54, output_size=2)
     elif dataset == "adult":

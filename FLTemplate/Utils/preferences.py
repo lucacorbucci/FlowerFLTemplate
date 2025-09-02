@@ -24,3 +24,6 @@ class Preferences:
     sweep: bool = False
     dataset_name: str = None
     scaler: Any = None
+    partitioner_type: str = None
+    partitioner_alpha: float = None
+    partitioner_by: str = None

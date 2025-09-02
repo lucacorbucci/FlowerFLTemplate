@@ -1,32 +1,24 @@
 import argparse
-import os
 import signal
 import sys
-from logging import INFO, WARNING
-from typing import cast
 
-import pandas as pd
 import wandb
 from Aggregations.aggregations import Aggregation
-from Client.client import FlowerClient
 from ClientManager.client_manager import SimpleClientManager
-from datasets import Dataset, load_dataset
-from Datasets.dataset_utils import prepare_data_for_cross_device, prepare_data_for_cross_silo
-from Datasets.dutch import get_dutch_scaler
-from Datasets.mnist import download_mnist
+from datasets import load_dataset
+from Datasets.dataset_utils import get_data_info, prepare_data_for_cross_device, prepare_data_for_cross_silo
 from flwr.client import ClientApp
 from flwr.common import Context, ndarrays_to_parameters
-from flwr.common.logger import log
 from flwr.server import ServerApp, ServerAppComponents, ServerConfig
 from flwr.simulation import run_simulation
-from flwr_datasets import FederatedDataset
-from flwr_datasets.partitioner import IidPartitioner
+from flwr_datasets.partitioner import DirichletPartitioner, IidPartitioner
+from flwr_datasets.visualization import plot_label_distributions
 from Models.models import get_model
 from Server.server import Server
 from Strategy.fed_avg import FedAvg
 from Utils.preferences import Preferences
 from Utils.utils import get_params
-from Datasets.dataset_utils import get_data_info
+
 
 def signal_handler(sig, frame):
     print("Gracefully stopping your experiment! Keep calm!")
@@ -74,23 +66,51 @@ def server_fn(context: Context):
     # Wrap everything into a `ServerAppComponents` object
     return ServerAppComponents(server=server, config=config)
 
+def get_partitioner(preferences):
+    partitioner_type = preferences.partitioner_type
+
+    match partitioner_type:
+        case "iid":
+            return IidPartitioner(num_partitions=preferences.num_clients)
+        case "non_iid":
+            return DirichletPartitioner(
+                num_partitions=args.num_clients, alpha=preferences.partitioner_alpha, partition_by=preferences.partitioner_by,
+            )
+        case _:
+            raise ValueError(f"Unsupported partitioner type: {partitioner_type}")
 
 
 def prepare_data(preferences: Preferences):
     if preferences.dataset_name == "dutch":
+
         data_info = get_data_info(preferences)
         preferences.scaler = data_info.get("scaler", None)
-        partitioner = IidPartitioner(num_partitions=num_clients)
+        dataset_dict = load_dataset("csv", data_files=preferences.dataset_path)
     elif preferences.dataset_name == "mnist":
         data_info = get_data_info(preferences)
         dataset_dict = load_dataset(data_info["data_type"], data_dir=preferences.dataset_path)
-        print(dataset_dict["train"])
-        data = dataset_dict["train"]
-        if data:
-            partitioner = IidPartitioner(num_partitions=num_clients)
-            partitioner.dataset = data
-        else:
-            raise ValueError("No training data found in the MNIST dataset")
+
+    data = dataset_dict["train"]
+    if data:
+        partitioner = get_partitioner(preferences)
+        partitioner.dataset = data
+    else:
+        raise ValueError("No training data found in the Dutch dataset")
+
+    if args.partitioner_by:
+        plot, _, _ = plot_label_distributions(
+                partitioner=partitioner,
+                label_name=args.partitioner_by,
+                plot_type="bar",
+                size_unit="absolute",
+                partition_id_axis="x",
+                legend=True,
+                verbose_labels=True,
+                max_num_partitions=args.num_clients,
+                title="Per Partition Labels Distribution",
+
+            )
+        plot.savefig(f"label_distribution_{args.partitioner_by}_{args.partitioner_type}.png",  bbox_inches='tight')
 
     return partitioner
 
@@ -119,6 +139,10 @@ parser.add_argument("--sweep", type=bool, default=False)
 parser.add_argument("--wandb", type=bool, default=True)
 parser.add_argument("--project_name", type=str, default="FLTemplate")
 parser.add_argument("--run_name", type=str, default=None)
+parser.add_argument("--partitioner_type", type=str, default="iid")
+parser.add_argument("--partitioner_alpha", type=float, default=None)
+parser.add_argument("--partitioner_by", type=str, default=None)
+
 
 
 if __name__ == "__main__":
@@ -149,6 +173,9 @@ if __name__ == "__main__":
         sweep=args.sweep,
         dataset_name=args.dataset_name,
         dataset_path=args.dataset_path,
+        partitioner_type=args.partitioner_type,
+        partitioner_alpha=args.partitioner_alpha,
+        partitioner_by=args.partitioner_by
     )
 
     wandb_run = (

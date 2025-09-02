@@ -1,18 +1,15 @@
 
-from logging import INFO, WARNING
+import os
 
 import numpy as np
-import torch
-import torchvision.transforms as transforms
+import pandas as pd
 from Client.client import FlowerClient
-from Datasets.dutch import prepare_dutch, prepare_dutch_for_cross_silo
-from Datasets.mnist import prepare_mnist, prepare_mnist_for_cross_silo
+from Datasets.dutch import get_dutch_scaler, prepare_dutch, prepare_dutch_for_cross_silo
+from Datasets.mnist import download_mnist, prepare_mnist, prepare_mnist_for_cross_silo
 from Datasets.tabular_datasets import TabularDataset
 from flwr.common import Context
-from torch.utils.data import DataLoader, Dataset
-from torchvision import transforms
+from torch.utils.data import DataLoader
 from Utils.preferences import Preferences
-
 
 
 def get_data_info(preferences: Preferences):
