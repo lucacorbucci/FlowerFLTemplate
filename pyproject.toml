@@ -18,12 +18,15 @@ dependencies = [
     "scikit-learn>=1.7.1",
     "torch>=2.7.0",
     "torchvision>=0.22.0",
+    "ty>=0.0.1a19",
     "wandb>=0.19.11",
 ]
 
 
 [tool.ruff]
 line-length = 120
+
+[tool.ruff.lint]
 select = [
     "ALL", # include all the rules, including new ones
 ]
@@ -52,6 +55,7 @@ ignore = [
     "D107",
     "D200",
     "D205",
+    "D211",
     "D212",
     "D400",
     "D401",
