@@ -263,6 +263,9 @@ class SimpleClientManager(ClientManager):
                     dill.dump(counter_sampling, f)
 
                 random.seed(self.preferences.seed)
+                self.test_clients_list = self.clients_list
+                self.training_clients_list = self.clients_list
+                self.validation_clients_list = self.clients_list
 
         with self._cv:
             self._cv.notify_all()
