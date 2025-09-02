@@ -1,14 +1,61 @@
 
 import os
 
+import numpy as np
+import pandas as pd
 import torch
 import torchvision
 import torchvision.transforms as transforms
+from Client.client import FlowerClient
+from Datasets.tabular_datasets import TabularDataset
 from PIL import Image
 from torch.utils.data import DataLoader, Dataset
-from torchvision.datasets import MNIST
-from torchvision.transforms import ToTensor
+from Utils.preferences import Preferences
 
+
+class ImageDataset(Dataset):
+    """
+    Custom Dataset class that handles images, labels, and sensitive attributes."""
+    def __init__(self, data, transform):
+        """
+        Initialize the dataset.
+
+        Args:
+            data: List of dictionaries or dataset containing 'image', 'label', and 'sensitive_attribute'
+            transform: Optional transform to be applied to images
+        """
+        self.data = data
+        self.transform = transform
+
+
+    def __len__(self):
+        """Return the size of the dataset."""
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        """
+        Get a single item from the dataset.
+
+        Args:
+            idx: Index of the item to retrieve
+
+        Returns:
+            Tuple containing (image, label, sensitive_attribute)
+        """
+        # Get the example at the given index
+        example = self.data[idx]
+
+        # Extract image, label, and sensitive attribute
+        image = example['image']
+        label = example['label']
+        sensitive_attribute = example.get('sensitive_attribute', -1)
+
+        # Apply transforms to the image
+        if self.transform:
+            image = self.transform(image)
+            
+
+        return image, sensitive_attribute, label
 
 def download_mnist(data_root='../data/'):
     """
@@ -56,3 +103,45 @@ def download_mnist(data_root='../data/'):
 
     return full_dataset
 
+
+def prepare_mnist(partition):
+    train = partition
+
+    train_dataset = ImageDataset(train, transform=transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.1307,), (0.3081,))
+        ]))
+    trainloader = DataLoader(
+            train_dataset,
+            batch_size=32,
+            shuffle=True
+        )
+    
+    return trainloader
+
+def prepare_mnist_for_cross_silo(preferences: Preferences, partition):
+    partition_train_test = partition.train_test_split(test_size=0.2, seed=42)
+    if preferences.sweep:
+        print("[Preparing data for cross-silo for sweep...]")
+
+        partition_loader_train_val = partition_train_test["train"].train_test_split(
+            test_size=0.2, seed=preferences.node_shuffle_seed
+        )
+        train = partition_loader_train_val["train"]
+        val = partition_loader_train_val["test"]
+
+        trainloader = prepare_mnist(train)
+        val_loader = prepare_mnist(val)
+
+        return FlowerClient(trainloader=trainloader, valloader=val_loader, preferences=preferences).to_client()
+    else:
+        print("[Preparing data for cross-silo...]")
+
+        train = partition_train_test["train"]
+        test = partition_train_test["test"]
+
+
+        trainloader = prepare_mnist(train)
+        test_loader = prepare_mnist(test)
+
+        return FlowerClient(trainloader=trainloader, valloader=test_loader, preferences=preferences).to_client()

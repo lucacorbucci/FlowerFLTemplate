@@ -4,18 +4,19 @@ from typing import Dict, Tuple
 import torch
 from flwr.client import NumPyClient
 from flwr.common import NDArrays, Scalar
-from Models.models import LinearClassificationNet, Net
+from Models.models import get_model
 from Training.training import test, train
+from Utils.preferences import Preferences
 from Utils.utils import get_params, set_params
 
 
 class FlowerClient(NumPyClient):
-    def __init__(self, trainloader, valloader) -> None:
+    def __init__(self, trainloader, valloader, preferences: Preferences) -> None:
         super().__init__()
 
         self.trainloader = trainloader
         self.valloader = valloader
-        self.model = LinearClassificationNet(input_size=12, output_size=2)
+        self.model = get_model(dataset=preferences.dataset_name)
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     def fit(self, parameters, config):

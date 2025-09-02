@@ -21,12 +21,12 @@ from flwr.server import ServerApp, ServerAppComponents, ServerConfig
 from flwr.simulation import run_simulation
 from flwr_datasets import FederatedDataset
 from flwr_datasets.partitioner import IidPartitioner
-from Models.models import LinearClassificationNet
+from Models.models import get_model
 from Server.server import Server
 from Strategy.fed_avg import FedAvg
 from Utils.preferences import Preferences
 from Utils.utils import get_params
-
+from Datasets.dataset_utils import get_data_info
 
 def signal_handler(sig, frame):
     print("Gracefully stopping your experiment! Keep calm!")
@@ -51,7 +51,7 @@ def client_fn(context: Context):
 
 def server_fn(context: Context):
     # instantiate the model
-    model = LinearClassificationNet(input_size=12, output_size=2)
+    model = get_model(dataset=preferences.dataset_name)
     ndarrays = get_params(model)
     # Convert model parameters to flwr.common.Parameters
     global_model_init = ndarrays_to_parameters(ndarrays)
@@ -75,39 +75,12 @@ def server_fn(context: Context):
     return ServerAppComponents(server=server, config=config)
 
 
-def get_data_info(preferences: Preferences):
-    match preferences.dataset_name:
-        case "dutch":
-            df = pd.read_csv(preferences.dataset_path)
-            scaler = get_dutch_scaler(
-                sweep=preferences.sweep,
-                seed=preferences.seed,
-                dutch_df=df,
-                validation_seed=preferences.node_shuffle_seed,
-            )
-
-            return {"data_type": "csv", "target": "occupation", "sensitive_attribute": "sex", "scaler": scaler}
-
-        case "mnist":
-            if not os.path.exists(os.path.join(preferences.dataset_path, 'MNIST/train/')):
-                download_mnist()
-            return {"data_type": "imagefolder"}
-        case _:
-            raise ValueError(f"Unsupported dataset: {preferences.dataset_name}")
-
 
 def prepare_data(preferences: Preferences):
     if preferences.dataset_name == "dutch":
         data_info = get_data_info(preferences)
         preferences.scaler = data_info.get("scaler", None)
-        # Build a FederatedDataset directly from the CSV using the provided partitioner
         partitioner = IidPartitioner(num_partitions=num_clients)
-
-        # fds = FederatedDataset(
-        #     dataset=data_info["data_type"],
-        #     partitioners={"train": partitioner},
-        #     data_files={"train": preferences.dataset_path},
-        # )
     elif preferences.dataset_name == "mnist":
         data_info = get_data_info(preferences)
         dataset_dict = load_dataset(data_info["data_type"], data_dir=preferences.dataset_path)
@@ -116,19 +89,10 @@ def prepare_data(preferences: Preferences):
         if data:
             partitioner = IidPartitioner(num_partitions=num_clients)
             partitioner.dataset = data
-
-            # fds = FederatedDataset(
-            #     dataset=data_info["data_type"],
-            #     partitioners={"train": partitioner},
-            #     data_files={"train": preferences.dataset_path},
-            # )
-            # print(partitioner.num_partitions)
-            # print(partitioner.dataset)
-            # print(fds)
         else:
             raise ValueError("No training data found in the MNIST dataset")
 
-    return partitioner #, fds
+    return partitioner
 
 
 def setup_wandb(project_name: str, run_name: str | None):
