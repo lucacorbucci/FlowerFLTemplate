@@ -1,28 +1,29 @@
 import argparse
-import copy
+import os
 import signal
 import sys
+from logging import INFO, WARNING
+from typing import cast
 
-import numpy as np
 import pandas as pd
 import wandb
 from Aggregations.aggregations import Aggregation
 from Client.client import FlowerClient
 from ClientManager.client_manager import SimpleClientManager
-from datasets import load_dataset
+from datasets import Dataset, load_dataset
+from Datasets.dataset_utils import prepare_data_for_cross_device, prepare_data_for_cross_silo
+from Datasets.dutch import get_dutch_scaler
+from Datasets.mnist import download_mnist
 from flwr.client import ClientApp
 from flwr.common import Context, ndarrays_to_parameters
+from flwr.common.logger import log
 from flwr.server import ServerApp, ServerAppComponents, ServerConfig
 from flwr.simulation import run_simulation
 from flwr_datasets import FederatedDataset
 from flwr_datasets.partitioner import IidPartitioner
-from flwr_datasets.visualization import plot_label_distributions
-from Models.models import LinearClassificationNet, Net
+from Models.models import LinearClassificationNet
 from Server.server import Server
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import MinMaxScaler
 from Strategy.fed_avg import FedAvg
-from torch.utils.data import DataLoader, Dataset
 from Utils.preferences import Preferences
 from Utils.utils import get_params
 
@@ -35,114 +36,18 @@ def signal_handler(sig, frame):
     sys.exit(0)
 
 
-class TabularDataset(Dataset):
-    def __init__(self, x, z, y):
-        """
-        Initialize the custom dataset with x (features), z (sensitive values), and y (targets).
-
-        Args:
-        x (list of tensors): List of input feature tensors.
-        z (list): List of sensitive values.
-        y (list): List of target values.
-        """
-        self.samples = x
-        self.sensitive_features = z
-        self.targets = y
-        self.indexes = range(len(self.samples))
-
-    def __len__(self):
-        return len(self.samples)
-
-    def __getitem__(self, idx):
-        """
-        Get a single data point from the dataset.
-
-        Args:
-        idx (int): Index to retrieve the data point.
-
-        Returns:
-        sample (dict): A dictionary containing 'x', 'z', and 'y'.
-        """
-        x_sample = self.samples[idx]
-        z_sample = self.sensitive_features[idx]
-        y_sample = self.targets[idx]
-
-        return x_sample, z_sample, y_sample
-
-
 def client_fn(context: Context):
     """Returns a FlowerClient containing its data partition."""
-
     partition_id = int(context.node_config["partition-id"])
-    partition = fds.load_partition(partition_id, "train")
-    # partition into train/validation
-    partition_train_test = partition.train_test_split(test_size=0.2, seed=42)
+    partition = partitioner.load_partition(partition_id)
 
-    if preferences.sweep:
-        partition_loader_train_val = partition_train_test["train"].train_test_split(
-            test_size=0.2, seed=preferences.node_shuffle_seed
-        )
-        train = partition_loader_train_val["train"]
-        val = partition_loader_train_val["test"]
-
-        x_train, z_train, y_train, _ = prepare_dutch(
-            dutch_df=train,
-            scaler=preferences.scaler,
-        )
-
-        x_val, z_val, y_val, _ = prepare_dutch(
-            dutch_df=val,
-            scaler=preferences.scaler,
-        )
-
-        train_dataset = TabularDataset(
-            x=np.hstack((x_train, np.ones((x_train.shape[0], 1)))).astype(np.float32),
-            z=z_train.astype(np.float32),
-            y=y_train.astype(np.float32),
-        )
-        val_dataset = TabularDataset(
-            x=np.hstack((x_val, np.ones((x_val.shape[0], 1)))).astype(np.float32),
-            z=z_val.astype(np.float32),
-            y=y_val.astype(np.float32),
-        )
-
-        trainloader = DataLoader(train_dataset, batch_size=32, shuffle=True)
-        val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
-
-        return FlowerClient(trainloader=trainloader, valloader=val_loader).to_client()
-
-    train = partition_train_test["train"].to_pandas()
-    test = partition_train_test["test"].to_pandas()
-
-    x_train, z_train, y_train, _ = prepare_dutch(
-        dutch_df=train,
-        scaler=preferences.scaler,
-    )
-
-    x_test, z_test, y_test, _ = prepare_dutch(
-        dutch_df=test,
-        scaler=preferences.scaler,
-    )
-
-    train_dataset = TabularDataset(
-        x=np.hstack((x_train, np.ones((x_train.shape[0], 1)))).astype(np.float32),
-        z=z_train.astype(np.float32),
-        y=y_train.astype(np.float32),
-    )
-    test_dataset = TabularDataset(
-        x=np.hstack((x_test, np.ones((x_test.shape[0], 1)))).astype(np.float32),
-        z=z_test.astype(np.float32),
-        y=y_test.astype(np.float32),
-    )
-
-    print("Train dataset size:", len(train_dataset))
-    print("Test dataset size:", len(test_dataset))
-
-    trainloader = DataLoader(train_dataset, batch_size=32, shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
-
-    return FlowerClient(trainloader=trainloader, valloader=test_loader).to_client()
-
+    if preferences.cross_device:
+        return prepare_data_for_cross_device(context, partition, preferences)
+    elif not preferences.cross_device:
+        return prepare_data_for_cross_silo(context, partition, preferences)
+    else:
+        raise ValueError("Unsupported FL setting")
+    return None # to satisfy the type checker
 
 def server_fn(context: Context):
     # instantiate the model
@@ -170,52 +75,6 @@ def server_fn(context: Context):
     return ServerAppComponents(server=server, config=config)
 
 
-def get_dutch_scaler(
-    sweep: bool,
-    seed: int,
-    dutch_df: pd.DataFrame | None = None,
-    validation_seed: int | None = None,
-) -> MinMaxScaler:
-    if dutch_df is None:
-        raise ValueError("dutch_df cannot be None")
-
-    _, _, _, scaler = prepare_dutch(
-        dutch_df=dutch_df,
-    )
-    return scaler
-
-
-def prepare_dutch(
-    dutch_df: pd.DataFrame,
-    scaler: MinMaxScaler | None = None,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, MinMaxScaler]:
-    # check the columns with missign values:
-    missing_values_columns = dutch_df.columns[dutch_df.isna().any()].tolist()
-    for column in missing_values_columns:
-        dutch_df[column] = dutch_df[column].fillna(dutch_df[column].mode()[0])
-
-    if len(dutch_df.columns[dutch_df.isna().any()].tolist()) != 0:
-        error_message = "There are still missing values in the dataset"
-        raise ValueError(error_message)
-
-    dutch_df["sex_binary"] = np.where(dutch_df["sex"] == 1, 1, 0)
-    dutch_df["occupation_binary"] = np.where(dutch_df["occupation"] >= 300, 1, 0)
-
-    del dutch_df["sex"]
-    del dutch_df["occupation"]
-
-    y_train = dutch_df["occupation_binary"].astype(int).values
-    z_train = dutch_df["sex_binary"].astype(int).values
-    del dutch_df["occupation_binary"]
-    dutch_df = pd.get_dummies(dutch_df, columns=None, drop_first=False)
-
-    if scaler is None:
-        scaler = MinMaxScaler()
-    x_train = scaler.fit_transform(dutch_df)
-
-    return x_train, np.array(z_train), np.array(y_train), scaler
-
-
 def get_data_info(preferences: Preferences):
     match preferences.dataset_name:
         case "dutch":
@@ -228,38 +87,48 @@ def get_data_info(preferences: Preferences):
             )
 
             return {"data_type": "csv", "target": "occupation", "sensitive_attribute": "sex", "scaler": scaler}
+
+        case "mnist":
+            if not os.path.exists(os.path.join(preferences.dataset_path, 'MNIST/train/')):
+                download_mnist()
+            return {"data_type": "imagefolder"}
         case _:
             raise ValueError(f"Unsupported dataset: {preferences.dataset_name}")
 
 
 def prepare_data(preferences: Preferences):
-    data_info = get_data_info(preferences)
+    if preferences.dataset_name == "dutch":
+        data_info = get_data_info(preferences)
+        preferences.scaler = data_info.get("scaler", None)
+        # Build a FederatedDataset directly from the CSV using the provided partitioner
+        partitioner = IidPartitioner(num_partitions=num_clients)
 
-    preferences.scaler = data_info["scaler"]
+        # fds = FederatedDataset(
+        #     dataset=data_info["data_type"],
+        #     partitioners={"train": partitioner},
+        #     data_files={"train": preferences.dataset_path},
+        # )
+    elif preferences.dataset_name == "mnist":
+        data_info = get_data_info(preferences)
+        dataset_dict = load_dataset(data_info["data_type"], data_dir=preferences.dataset_path)
+        print(dataset_dict["train"])
+        data = dataset_dict["train"]
+        if data:
+            partitioner = IidPartitioner(num_partitions=num_clients)
+            partitioner.dataset = data
 
-    # Build a FederatedDataset directly from the CSV using the provided partitioner
-    partitioner = IidPartitioner(num_partitions=num_clients)
-    fds = FederatedDataset(
-        dataset=data_info["data_type"],
-        partitioners={"train": partitioner},
-        data_files={"train": preferences.dataset_path},
-    )
+            # fds = FederatedDataset(
+            #     dataset=data_info["data_type"],
+            #     partitioners={"train": partitioner},
+            #     data_files={"train": preferences.dataset_path},
+            # )
+            # print(partitioner.num_partitions)
+            # print(partitioner.dataset)
+            # print(fds)
+        else:
+            raise ValueError("No training data found in the MNIST dataset")
 
-    # Retrieve the partitioner instance for the train split
-    # partitioner = fds.partitioners["train"]
-    # fig, ax, df = plot_label_distributions(
-    #     partitioner,
-    #     label_name=data_info["target"],
-    #     plot_type="bar",
-    #     size_unit="absolute",
-    #     partition_id_axis="x",
-    #     legend=True,
-    #     verbose_labels=True,
-    #     max_num_partitions=100,  # Note we are only showing the first 30 so the plot remains readable
-    #     title="Per Partition Labels Distribution",
-    # )
-    # fig.savefig("per_partition_labels_distribution.png", bbox_inches="tight")
-    return partitioner, fds
+    return partitioner #, fds
 
 
 def setup_wandb(project_name: str, run_name: str | None):
@@ -296,7 +165,7 @@ if __name__ == "__main__":
     num_clients = args.num_clients
     num_rounds = args.num_rounds
 
-    cross_device = True if args.FL_setting == "cross_device" else False
+    cross_device = args.FL_setting == "cross_device"
 
     preferences = Preferences(
         num_clients=num_clients,
@@ -330,7 +199,7 @@ if __name__ == "__main__":
     # Create your ServerApp
     client_manager = SimpleClientManager(preferences=preferences)
 
-    partitioner, fds = prepare_data(preferences=preferences)
+    partitioner = prepare_data(preferences=preferences)
 
     # Create your ServerApp
     server_app = ServerApp(server_fn=server_fn)
