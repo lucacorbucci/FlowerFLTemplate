@@ -94,7 +94,7 @@ class SimpleClientManager(ClientManager):
             sampled_nodes[fl_round] = client_list[start:end]
         return sampled_nodes
 
-    def sample_clients_per_round(self, nodes_to_sample: int, client_list: List[str]) -> Dict[int, List[str]]:
+    def sample_clients_per_round(self, fraction: float, client_list: List[str]) -> Dict[int, List[str]]:
         """Sample clients for each round.
 
         This method samples clients for each round based on the preferences set in the
@@ -102,11 +102,16 @@ class SimpleClientManager(ClientManager):
         and the values are lists of client IDs.
         """
         sampled_nodes = {}
+        nodes_to_sample = int(fraction * len(client_list))
         for fl_round in range(self.preferences.num_rounds):
             # number of nodes we have to select in each round
-            start = fl_round * nodes_to_sample % len(client_list)
-            end = (fl_round * nodes_to_sample + nodes_to_sample) % len(client_list)
-
+            if fraction == 1.0:
+                start = 0
+                end = len(client_list)
+            else:
+                start = fl_round * nodes_to_sample % len(client_list)
+                end = (fl_round * nodes_to_sample + nodes_to_sample) % len(client_list)
+            print(f"Round {fl_round}: Sampling nodes from {start} to {end}")
             if start < end:
                 sampled_nodes[fl_round] = client_list[start:end]
             else:
@@ -141,6 +146,7 @@ class SimpleClientManager(ClientManager):
                 # If we are doing an hyperparameter search, we want to sample the clients
                 # so that we have a training set of clients, a validation set of clients and
                 # a test set of clients.
+                self.validation_clients_list = None
                 random.seed(self.preferences.seed)
                 self.clients_list = [
                     str(client_id) for client_id in sorted([int(client_id) for client_id in self.clients_list])
@@ -152,7 +158,7 @@ class SimpleClientManager(ClientManager):
                 self.test_clients_list = self.clients_list[: self.preferences.num_test_nodes]
                 print("Nodes to sample: ", self.preferences.sampled_test_nodes_per_round)
                 sampled_nodes_test = self.sample_clients_per_round(
-                    nodes_to_sample=self.preferences.sampled_test_nodes_per_round,
+                    fraction=self.preferences.sampled_test_nodes_per_round,
                     client_list=self.test_clients_list,
                 )
                 print("Test Nodes: ", sampled_nodes_test)
@@ -169,11 +175,11 @@ class SimpleClientManager(ClientManager):
                 random.shuffle(remaining_nodes)
 
                 # Now we check if we need to create the validation set
-                if self.preferences.num_validation_nodes > 0:
+                if self.preferences.sweep and self.preferences.num_validation_nodes > 0:
                     self.validation_clients_list = remaining_nodes[: self.preferences.num_validation_nodes]
                     remaining_nodes = remaining_nodes[self.preferences.num_validation_nodes :]
                     sampled_nodes_validation = self.sample_clients_per_round(
-                        nodes_to_sample=self.preferences.sampled_validation_nodes_per_round,
+                        fraction=self.preferences.sampled_validation_nodes_per_round,
                         client_list=self.validation_clients_list,
                     )
                     with open(f"{self.preferences.fed_dir}/validation_nodes_per_round.pkl", "wb") as f:
@@ -185,7 +191,7 @@ class SimpleClientManager(ClientManager):
                 self.training_clients_list = remaining_nodes
 
                 sampled_nodes_train = self.sample_clients_per_round(
-                    nodes_to_sample=self.preferences.sampled_training_nodes_per_round,
+                    fraction=self.preferences.sampled_training_nodes_per_round,
                     client_list=self.training_clients_list,
                 )
                 with open(f"{self.preferences.fed_dir}/train_nodes_per_round.pkl", "wb") as f:
@@ -204,6 +210,9 @@ class SimpleClientManager(ClientManager):
                 with open(f"{self.preferences.fed_dir}/counter_sampling.pkl", "wb") as f:
                     dill.dump(counter_sampling, f)
 
+                print("Train nodes: ", self.training_clients_list)
+                print("Validation nodes: ", self.validation_clients_list)
+                print("Test nodes: ", self.test_clients_list)
             else:
                 random.seed(self.preferences.node_shuffle_seed)
                 random.shuffle(self.clients_list)
