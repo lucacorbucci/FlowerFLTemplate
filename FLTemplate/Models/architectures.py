@@ -17,6 +17,30 @@ class LinearClassificationNet(nn.Module):
         x = self.layer1(x.float())
         return x
 
+class AbaloneNet(nn.Module):
+    """Neural Network for Abalone age prediction"""
+    def __init__(self, input_size, hidden_sizes=[128, 64, 32], dropout_rate=0.2):
+        super(AbaloneNet, self).__init__()
+        
+        layers = []
+        prev_size = input_size
+        
+        for hidden_size in hidden_sizes:
+            layers.extend([
+                nn.Linear(prev_size, hidden_size),
+                nn.ReLU(),
+                nn.BatchNorm1d(hidden_size),
+                nn.Dropout(dropout_rate)
+            ])
+            prev_size = hidden_size
+        
+        # Output layer
+        layers.append(nn.Linear(prev_size, 1))
+        
+        self.network = nn.Sequential(*layers)
+    
+    def forward(self, x):
+        return self.network(x)
 
 
 class SimpleMNISTModel(nn.Module):

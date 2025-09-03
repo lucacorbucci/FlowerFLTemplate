@@ -33,7 +33,10 @@ class TabularDataset(Dataset):
 
         """
         x_sample = self.samples[idx]
-        z_sample = self.sensitive_features[idx]
+        if self.sensitive_features:
+            z_sample = self.sensitive_features[idx]
+        else:
+            z_sample = None
         y_sample = self.targets[idx]
 
         return x_sample, z_sample, y_sample

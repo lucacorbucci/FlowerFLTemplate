@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 from flwr.client import NumPyClient
 from flwr.common import NDArrays, Scalar
+from Models.regression_model import RegressionModel
 from Models.simple_model import SimpleModel
 from Models.utils import get_model
 
@@ -21,12 +22,22 @@ class FlowerClient(NumPyClient):
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.preferences = preferences
         trained_model = get_model(dataset=preferences.dataset_name)
-        self.model = SimpleModel(
-            model = trained_model,
-            optimizer = get_optimizer(trained_model, self.preferences),
-            criterion = nn.CrossEntropyLoss(),
-            device = self.device
-        )
+        if self.preferences.task == "classification":
+            self.model = SimpleModel(
+                model = trained_model,
+                optimizer = get_optimizer(trained_model, self.preferences),
+                criterion = nn.CrossEntropyLoss(),
+                device = self.device
+            )
+        elif self.preferences.task == "regression":
+            self.model = RegressionModel(
+                model = trained_model,
+                optimizer = get_optimizer(trained_model, self.preferences),
+                criterion = nn.MSELoss(),
+                device = self.device
+            )
+        else:
+            raise ValueError(f"Unknown task type: {self.preferences.task}")
 
     def fit(self, parameters, config):
         """This method trains the model using the parameters sent by the
@@ -38,17 +49,17 @@ class FlowerClient(NumPyClient):
 
         # do local training (call same function as centralised setting)
         for _ in range(self.preferences.num_epochs):
-            loss, accuracy = self.model.train(trainloader=self.trainloader, epochs=self.preferences.num_epochs,)
+            result_dict = self.model.train(trainloader=self.trainloader, epochs=self.preferences.num_epochs)
 
         # return the model parameters to the server as well as extra info (number of training examples in this case)
-        return get_params(self.model.model), len(self.trainloader), {"accuracy": accuracy, "loss": loss}
+        return get_params(self.model.model), len(self.trainloader), result_dict
 
     def evaluate(self, parameters: NDArrays, config: Dict[str, Scalar]):
         """Evaluate the model sent by the server on this client's
         local validation set. Then return performance metrics."""
 
         set_params(self.model.model, parameters)
-        loss, accuracy = self.model.evaluate(testloader=self.valloader)
-        return float(loss), len(self.valloader), {"accuracy": accuracy, "loss": loss}
+        result_dict = self.model.evaluate(testloader=self.valloader)
+        return float(result_dict["loss"]), len(self.valloader), result_dict
 
 

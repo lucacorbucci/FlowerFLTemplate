@@ -79,20 +79,25 @@ def get_partitioner(preferences):
 
 def prepare_data(preferences: Preferences):
     if preferences.dataset_name == "dutch":
-
         data_info = get_data_info(preferences)
         preferences.scaler = data_info.get("scaler", None)
         dataset_dict = load_dataset("csv", data_files=preferences.dataset_path)
     elif preferences.dataset_name == "mnist":
         data_info = get_data_info(preferences)
         dataset_dict = load_dataset(data_info["data_type"], data_dir=preferences.dataset_path)
-
+    elif preferences.dataset_name == "abalone":
+        data_info = get_data_info(preferences)
+        preferences.scaler = data_info.get("scaler", None)
+        dataset_dict = load_dataset("csv", data_files=preferences.dataset_path)
+    else:
+        raise ValueError(f"Unsupported dataset: {preferences.dataset_name}")
+ 
     data = dataset_dict["train"]
     if data:
         partitioner = get_partitioner(preferences)
         partitioner.dataset = data
     else:
-        raise ValueError("No training data found in the Dutch dataset")
+        raise ValueError("No training data found in the dataset")
 
     if args.partitioner_by:
         plot, _, _ = plot_label_distributions(
@@ -139,6 +144,7 @@ parser.add_argument("--run_name", type=str, default=None)
 parser.add_argument("--partitioner_type", type=str, default="iid")
 parser.add_argument("--partitioner_alpha", type=float, default=None)
 parser.add_argument("--partitioner_by", type=str, default=None)
+parser.add_argument("--task", type=str, default="classification")
 
 parser.add_argument("--batch_size", type=int, default=32)
 parser.add_argument("--lr", type=float, default=0.01)
@@ -184,6 +190,7 @@ if __name__ == "__main__":
         lr=args.lr,
         optimizer=args.optimizer,
         momentum=args.momentum,
+        task=args.task,
     )
 
     wandb_run = (

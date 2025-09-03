@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch import Tensor, nn
 
-from Models.architectures import CelebaNet, LinearClassificationNet, SimpleMNISTModel
+from Models.architectures import AbaloneNet, CelebaNet, LinearClassificationNet, SimpleMNISTModel
 
 
 def get_model(
@@ -31,5 +31,10 @@ def get_model(
         return LinearClassificationNet(input_size=103, output_size=2)
     elif dataset == "mnist":
         return SimpleMNISTModel()
+    elif dataset == "abalone":
+        return AbaloneNet(input_size=8, hidden_sizes=[128, 64, 32], dropout_rate=0.2)
+
     else:
         raise ValueError(f"Dataset {dataset} not supported")
+
+

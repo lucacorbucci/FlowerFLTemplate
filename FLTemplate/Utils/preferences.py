@@ -28,6 +28,8 @@ class Preferences:
     partitioner_alpha: float = None
     partitioner_by: str = None
 
+    task: str = "classification" 
+
     batch_size: int = 32
     lr: float = 0.01
     optimizer: str = "adam"

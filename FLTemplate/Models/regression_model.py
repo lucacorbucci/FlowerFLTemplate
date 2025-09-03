@@ -1,11 +1,13 @@
+import numpy as np
 import torch
 import torch.nn as nn
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from torch.utils.data import DataLoader
 
 from Models.model import Model
 
 
-class SimpleModel(Model):
+class RegressionModel(Model):
     """
     A wrapper for PyTorch models that adds fairness-aware training and evaluation.
     """
@@ -18,7 +20,7 @@ class SimpleModel(Model):
         device: torch.device
     ):
         """
-        Initialize the SimpleModel wrapper.
+        Initialize the RegressionModel wrapper.
 
         Args:
             model (nn.Module): The PyTorch model to wrap
@@ -52,27 +54,22 @@ class SimpleModel(Model):
             Dict[str, List[float]]: Dictionary of metrics tracked during training
         """
         # Initialize tracking metrics
-        criterion = torch.nn.CrossEntropyLoss()
+        
         self.model.to(self.device)
         self.model.train()
         losses = 0.0
-        correct = 0
         for sample, _, label in trainloader:
             sample, labels = sample.to(self.device), label.to(self.device)
             self.optimizer.zero_grad()
             output = self.model(sample)
-            loss = criterion(output, labels.long())
+            loss = self.criterion(output, labels)
             loss.backward()
-            self.optimizer.step()
+            self.optimizer.step()   
             losses += loss.item()
-            _, predicted = torch.max(output.data, 1)
-            correct += (predicted == labels).sum().item()
 
         loss = torch.tensor(losses / len(trainloader), device=self.device)
-        accuracy = correct / len(trainloader.dataset)
-        return {"loss": loss.item(), "accuracy": accuracy}
+        return {"loss": loss.item()}
 
-    
     def evaluate(self, testloader: DataLoader) -> (float, float):
         """
         Evaluate the model on a dataset.
@@ -86,19 +83,28 @@ class SimpleModel(Model):
         """
         self.model.to(self.device)
         self.model.eval()
-        criterion = torch.nn.CrossEntropyLoss()
-        correct, loss = 0, 0.0
         losses = 0.0
+
+        predictions = []
+        actuals = []
 
         with torch.no_grad():
             for sample, _, label in testloader:
                 images, labels = sample.to(self.device), label.to(self.device)
                 outputs = self.model(images)
-                loss = criterion(outputs, labels.long())
-                _, predicted = torch.max(outputs.data, 1)
-                correct += (predicted == labels).sum().item()
+                loss = self.criterion(outputs, labels)
                 losses += loss.item()
+                predictions.extend(outputs.cpu().numpy())
+                actuals.extend(label.numpy())
+
+        predictions = np.array(predictions).flatten()
+        actuals = np.array(actuals).flatten()
+
+        mse = mean_squared_error(actuals, predictions)
+        mae = mean_absolute_error(actuals, predictions)
+        r2 = r2_score(actuals, predictions)
+        rmse = np.sqrt(mse)
 
         loss = torch.tensor(losses / len(testloader), device=self.device)
-        accuracy = correct / len(testloader.dataset)
-        return {"loss": loss.item(), "accuracy": accuracy}
+
+        return {"loss": loss.item(), 'rmse': rmse, 'mae': mae, 'r2': r2, 'mse': mse}

@@ -21,3 +21,4 @@ train_ds
 elia/
 old_fltemplate/
 training_data/
+*.txt
