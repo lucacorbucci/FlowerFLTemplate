@@ -101,7 +101,7 @@ def prepare_data(preferences: Preferences) -> Any:
         error = f"Unsupported dataset: {preferences.dataset_name}"
         raise ValueError(error)
 
-    data = dataset_dict["train"]
+    data = dataset_dict["train"]  # type: ignore
     if data:
         partitioner = get_partitioner(preferences)
         partitioner.dataset = data

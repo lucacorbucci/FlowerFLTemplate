@@ -66,7 +66,7 @@ class SimpleModel(Model):
             correct += (predicted == labels).sum().item()
 
         loss = torch.tensor(losses / len(trainloader), device=self.device)
-        accuracy = correct / len(trainloader.dataset)
+        accuracy = correct / len(trainloader.dataset)  # type: ignore
         return {"loss": loss.item(), "accuracy": accuracy}
 
     def evaluate(self, testloader: DataLoader) -> dict[str, float]:
@@ -97,5 +97,5 @@ class SimpleModel(Model):
                 losses += loss.item()
 
         loss = torch.tensor(losses / len(testloader), device=self.device)
-        accuracy = correct / len(testloader.dataset)
+        accuracy = correct / len(testloader.dataset)  # type: ignore
         return {"loss": loss.item(), "accuracy": accuracy}

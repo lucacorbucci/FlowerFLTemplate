@@ -87,7 +87,7 @@ def download_mnist(data_root: str = "../data/") -> Any:
             os.makedirs(class_dir)
 
     # Iterate through the full dataset and save images
-    for i, (image_tensor, label) in enumerate(full_dataset):
+    for i, (image_tensor, label) in enumerate(full_dataset):  # type: ignore
         # Convert the PyTorch tensor to a PIL Image
         # The image tensor is 1x28x28, so we need to squeeze it to 28x28
         image = Image.fromarray((image_tensor.squeeze() * 255).numpy().astype("uint8"))
