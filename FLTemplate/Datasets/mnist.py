@@ -104,7 +104,7 @@ def download_mnist(data_root='../data/'):
     return full_dataset
 
 
-def prepare_mnist(partition):
+def prepare_mnist(partition, preferences):
     train = partition
 
     train_dataset = ImageDataset(train, transform=transforms.Compose([
@@ -113,7 +113,7 @@ def prepare_mnist(partition):
         ]))
     trainloader = DataLoader(
             train_dataset,
-            batch_size=128,
+            batch_size=preferences.batch_size,
             shuffle=True
         )
     
@@ -130,8 +130,8 @@ def prepare_mnist_for_cross_silo(preferences: Preferences, partition):
         train = partition_loader_train_val["train"]
         val = partition_loader_train_val["test"]
 
-        trainloader = prepare_mnist(train)
-        valloader = prepare_mnist(val)
+        trainloader = prepare_mnist(train, preferences)
+        valloader = prepare_mnist(val, preferences)
 
         return FlowerClient(trainloader=trainloader, valloader=valloader, preferences=preferences).to_client()
     else:
@@ -141,7 +141,7 @@ def prepare_mnist_for_cross_silo(preferences: Preferences, partition):
         test = partition_train_test["test"]
 
 
-        trainloader = prepare_mnist(train)
-        testloader = prepare_mnist(test)
+        trainloader = prepare_mnist(train, preferences)
+        testloader = prepare_mnist(test, preferences)
 
         return FlowerClient(trainloader=trainloader, valloader=testloader, preferences=preferences).to_client()

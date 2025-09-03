@@ -62,8 +62,8 @@ def prepare_dutch_for_cross_silo(preferences: Preferences, partition):
         partition_loader_train_val = partition_train_test["train"].train_test_split(
             test_size=0.2, seed=preferences.node_shuffle_seed
         )
-        train = partition_loader_train_val["train"]
-        val = partition_loader_train_val["test"]
+        train = partition_loader_train_val["train"].to_pandas()
+        val = partition_loader_train_val["test"].to_pandas()
 
         x_train, z_train, y_train, _ = prepare_dutch(
             dutch_df=train,
@@ -86,8 +86,8 @@ def prepare_dutch_for_cross_silo(preferences: Preferences, partition):
             y=y_val.astype(np.float32),
         )
 
-        trainloader = DataLoader(train_dataset, batch_size=32, shuffle=True)
-        val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
+        trainloader = DataLoader(train_dataset, batch_size=preferences.batch_size, shuffle=True)
+        val_loader = DataLoader(val_dataset, batch_size=preferences.batch_size, shuffle=False)
 
         return FlowerClient(trainloader=trainloader, valloader=val_loader, preferences=preferences).to_client()
     else:
@@ -119,7 +119,7 @@ def prepare_dutch_for_cross_silo(preferences: Preferences, partition):
         print("Train dataset size:", len(train_dataset))
         print("Test dataset size:", len(test_dataset))
 
-        trainloader = DataLoader(train_dataset, batch_size=32, shuffle=True)
-        test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
+        trainloader = DataLoader(train_dataset, batch_size=preferences.batch_size, shuffle=True)
+        test_loader = DataLoader(test_dataset, batch_size=preferences.batch_size, shuffle=False)
 
         return FlowerClient(trainloader=trainloader, valloader=test_loader, preferences=preferences).to_client()
