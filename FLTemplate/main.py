@@ -1,6 +1,7 @@
 import argparse
 import signal
 import sys
+from typing import Any
 
 import wandb
 from Aggregations.aggregations import Aggregation
@@ -20,7 +21,7 @@ from Utils.preferences import Preferences
 from Utils.utils import get_params
 
 
-def signal_handler(sig, frame) -> None:
+def signal_handler(sig: int, frame: Any) -> None:
     print("Gracefully stopping your experiment! Keep calm!")
     # global wandb_run
     # if wandb_run:
@@ -28,7 +29,7 @@ def signal_handler(sig, frame) -> None:
     sys.exit(0)
 
 
-def client_fn(context: Context):
+def client_fn(context: Context) -> Any:
     """Returns a FlowerClient containing its data partition."""
     partition_id = int(context.node_config["partition-id"])
     partition = partitioner.load_partition(partition_id)
@@ -39,7 +40,7 @@ def client_fn(context: Context):
     return prepare_data_for_cross_silo(context, partition, preferences)
 
 
-def server_fn(context: Context):
+def server_fn(context: Context) -> ServerAppComponents:
     # instantiate the model
     model = get_model(dataset=preferences.dataset_name)
     ndarrays = get_params(model)
@@ -67,7 +68,7 @@ def server_fn(context: Context):
     return ServerAppComponents(server=server, config=config)
 
 
-def get_partitioner(preferences):
+def get_partitioner(preferences: Preferences) -> Any:
     partitioner_type = preferences.partitioner_type
 
     match partitioner_type:
@@ -84,7 +85,7 @@ def get_partitioner(preferences):
             raise ValueError(error)
 
 
-def prepare_data(preferences: Preferences):
+def prepare_data(preferences: Preferences) -> Any:
     if preferences.dataset_name == "dutch":
         data_info = get_data_info(preferences)
         preferences.scaler = data_info.get("scaler", None)
@@ -125,7 +126,7 @@ def prepare_data(preferences: Preferences):
     return partitioner
 
 
-def setup_wandb(project_name: str, run_name: str | None):
+def setup_wandb(project_name: str, run_name: str | None) -> Any:
     return wandb.init(project=project_name, name=run_name) if run_name else wandb.init(project=project_name)
 
 

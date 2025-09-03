@@ -17,9 +17,9 @@ class Model(ABC):
         self.device = device
 
     @abstractmethod
-    def train(self):
+    def train(self) -> None:
         pass
 
     @abstractmethod
-    def evaluate(self):
+    def evaluate(self) -> None:
         pass

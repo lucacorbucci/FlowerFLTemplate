@@ -30,3 +30,5 @@ line-length = 120
 select = ["F", "E", "W", "N", "I", "ANN", "B", "C4", "UP"]
 ignore = ["E501", "ANN101", "ANN102", "ANN401", "B008", "C901", "W191"]
 
+[tool.ty.rules]
+unresolved-import = "ignore"

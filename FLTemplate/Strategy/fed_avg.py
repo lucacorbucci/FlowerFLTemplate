@@ -20,6 +20,7 @@ Paper: arxiv.org/abs/1602.05629
 
 from collections.abc import Callable
 from logging import WARNING
+from typing import Any
 
 from flwr.common import (
     EvaluateIns,
@@ -110,7 +111,7 @@ class FedAvg(Strategy):
         evaluate_metrics_aggregation_fn: MetricsAggregationFn | None = None,
         test_metrics_aggregation_fn: MetricsAggregationFn | None = None,
         inplace: bool = True,
-        wandb_run=None,
+        wandb_run: Any = None,
     ) -> None:
         super().__init__()
 

@@ -1,4 +1,4 @@
-import torch.nn.functional as F
+import torch.nn.functional as functional
 from torch import Tensor, nn
 
 
@@ -8,11 +8,11 @@ class LinearClassificationNet(nn.Module):
     A fully-connected single-layer linear NN for classification.
     """
 
-    def __init__(self, input_size, output_size) -> None:
+    def __init__(self, input_size: int, output_size: int) -> None:
         super().__init__()
         self.layer1 = nn.Linear(input_size, output_size, bias=False)
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tensor:
         x = self.layer1(x.float())
         return x
 
@@ -21,7 +21,7 @@ class AbaloneNet(nn.Module):
 
     """Neural Network for Abalone age prediction"""
 
-    def __init__(self, input_size, hidden_sizes=None, dropout_rate=0.2) -> None:
+    def __init__(self, input_size: int, hidden_sizes: list[int] | None = None, dropout_rate: float = 0.2) -> None:
         if hidden_sizes is None:
             hidden_sizes = [128, 64, 32]
         super().__init__()
@@ -40,7 +40,7 @@ class AbaloneNet(nn.Module):
 
         self.network = nn.Sequential(*layers)
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tensor:
         return self.network(x)
 
 
@@ -50,18 +50,18 @@ class SimpleMNISTModel(nn.Module):
     A simpler fully connected model for MNIST.
     """
 
-    def __init__(self, num_classes=10) -> None:
+    def __init__(self, num_classes: int = 10) -> None:
         super().__init__()
 
         self.fc1 = nn.Linear(28 * 28, 128)
         self.fc2 = nn.Linear(128, num_classes)
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tensor:
         # Flatten the input
         x = x.view(-1, 28 * 28)
 
         # Pass through layers
-        x = F.relu(self.fc1(x))
+        x = functional.relu(self.fc1(x))
         x = self.fc2(x)
 
         return x

@@ -4,9 +4,8 @@ import numpy as np
 import pandas as pd
 from Client.client import FlowerClient
 from Datasets.abalone import AbaloneDataset, get_abalone_scaler, prepare_abalone, prepare_abalone_for_cross_silo
-from Datasets.dutch import get_dutch_scaler, prepare_dutch, prepare_dutch_for_cross_silo
+from Datasets.dutch import DutchDataset, get_dutch_scaler, prepare_dutch, prepare_dutch_for_cross_silo
 from Datasets.mnist import download_mnist, prepare_mnist, prepare_mnist_for_cross_silo
-from Datasets.tabular_datasets import TabularDataset
 from flwr.common import Context
 from torch.utils.data import DataLoader
 from Utils.preferences import Preferences
@@ -51,7 +50,7 @@ def prepare_data_for_cross_device(context: Context, partition, preferences: Pref
             dutch_df=train,
             scaler=preferences.scaler,
         )
-        train_dataset = TabularDataset(
+        train_dataset = DutchDataset(
             x=np.hstack((x_train, np.ones((x_train.shape[0], 1)))).astype(np.float32),
             z=z_train.astype(np.float32),
             y=y_train.astype(np.float32),

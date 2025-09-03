@@ -45,7 +45,7 @@ class SimpleClientManager(ClientManager):
         """
         return len(self.clients)
 
-    def num_available(self, phase) -> int:
+    def num_available(self, phase: str) -> int:
         """
         Return the number of available clients.
 
@@ -83,7 +83,7 @@ class SimpleClientManager(ClientManager):
         with self._cv:
             return self._cv.wait_for(lambda: len(self.clients) >= num_clients, timeout=timeout)
 
-    def pre_sample_clients(self, fraction, client_list):
+    def pre_sample_clients(self, fraction: float, client_list: list[str]) -> dict[int, list[str]]:
         sampled_nodes = {}
         nodes_to_sample = int(fraction * len(client_list))
         for fl_round in range(self.preferences.num_rounds):
