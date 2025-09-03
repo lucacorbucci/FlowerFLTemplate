@@ -9,7 +9,6 @@ from Utils.preferences import Preferences
 
 
 class SimpleClientManager(ClientManager):
-
     """Provides a pool of available clients."""
 
     def __init__(self, preferences: Preferences = None) -> None:

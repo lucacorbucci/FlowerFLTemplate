@@ -38,7 +38,6 @@ ReconnectResultsAndFailures = tuple[
 
 
 class Server:
-
     """Flower server."""
 
     def __init__(
@@ -472,7 +471,6 @@ def _handle_finished_future_after_evaluate(
 
     # Not successful, client returned a result where the status code is not OK
     failures.append(result)
-
 
 
 def run_fl(

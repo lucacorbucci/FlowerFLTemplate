@@ -1,4 +1,3 @@
-
 from typing import Any
 
 import numpy as np
@@ -11,7 +10,6 @@ from Utils.preferences import Preferences
 
 
 class AbaloneDataset(Dataset):
-
     """Custom Dataset for Abalone data"""
 
     def __init__(self, x: np.ndarray, y: np.ndarray) -> None:
@@ -21,7 +19,7 @@ class AbaloneDataset(Dataset):
     def __len__(self) -> int:
         return len(self.X)
 
-    def __getitem__(self, idx:int) -> tuple[Any, Any, Any]:
+    def __getitem__(self, idx: int) -> tuple[Any, Any, Any]:
         return self.X[idx], -1, self.y[idx]
 
 
@@ -48,7 +46,6 @@ def prepare_abalone(
     abalone_df: pd.DataFrame,
     scaler: StandardScaler | None = None,
 ) -> tuple[np.ndarray, np.ndarray, StandardScaler]:
-
     # Separate features and target
     x = abalone_df.drop("Rings", axis=1)
     y_train = abalone_df["Rings"].values  # Age = Rings + 1.5, but we'll predict rings directly

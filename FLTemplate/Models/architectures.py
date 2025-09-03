@@ -3,7 +3,6 @@ from torch import Tensor, nn
 
 
 class LinearClassificationNet(nn.Module):
-
     """
     A fully-connected single-layer linear NN for classification.
     """
@@ -18,7 +17,6 @@ class LinearClassificationNet(nn.Module):
 
 
 class AbaloneNet(nn.Module):
-
     """Neural Network for Abalone age prediction"""
 
     def __init__(self, input_size: int, hidden_sizes: list[int] | None = None, dropout_rate: float = 0.2) -> None:
@@ -45,7 +43,6 @@ class AbaloneNet(nn.Module):
 
 
 class SimpleMNISTModel(nn.Module):
-
     """
     A simpler fully connected model for MNIST.
     """
@@ -68,7 +65,6 @@ class SimpleMNISTModel(nn.Module):
 
 
 class CelebaNet(nn.Module):
-
     """This class defines the CelebaNet."""
 
     def __init__(

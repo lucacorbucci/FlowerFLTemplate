@@ -45,7 +45,6 @@ class DutchDataset(Dataset):
         return x_sample, z_sample, y_sample
 
 
-
 def get_dutch_scaler(
     sweep: bool,
     seed: int,

@@ -17,6 +17,7 @@ Federated Averaging (FedAvg) [McMahan et al., 2016] strategy.
 
 Paper: arxiv.org/abs/1602.05629
 """
+
 from collections.abc import Callable
 from logging import WARNING
 from typing import Any
@@ -50,7 +51,6 @@ than or equal to the values of `min_fit_clients` and `min_evaluate_clients`.
 
 # pylint: disable=line-too-long
 class FedAvg(Strategy):
-
     """
     Federated Averaging strategy.
 

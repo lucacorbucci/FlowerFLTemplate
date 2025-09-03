@@ -11,7 +11,6 @@ from Utils.preferences import Preferences
 
 
 class ImageDataset(Dataset):
-
     """
     Custom Dataset class that handles images, labels, and sensitive attributes."""
 
