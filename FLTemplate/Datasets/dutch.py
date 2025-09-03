@@ -113,12 +113,12 @@ def prepare_dutch_for_cross_silo(preferences: Preferences, partition):
             scaler=preferences.scaler,
         )
 
-        train_dataset = TabularDataset(
+        train_dataset = DutchDataset(
             x=np.hstack((x_train, np.ones((x_train.shape[0], 1)))).astype(np.float32),
             z=z_train.astype(np.float32),
             y=y_train.astype(np.float32),
         )
-        val_dataset = TabularDataset(
+        val_dataset = DutchDataset(
             x=np.hstack((x_val, np.ones((x_val.shape[0], 1)))).astype(np.float32),
             z=z_val.astype(np.float32),
             y=y_val.astype(np.float32),
@@ -142,12 +142,12 @@ def prepare_dutch_for_cross_silo(preferences: Preferences, partition):
         scaler=preferences.scaler,
     )
 
-    train_dataset = TabularDataset(
+    train_dataset = DutchDataset(
         x=np.hstack((x_train, np.ones((x_train.shape[0], 1)))).astype(np.float32),
         z=z_train.astype(np.float32),
         y=y_train.astype(np.float32),
     )
-    test_dataset = TabularDataset(
+    test_dataset = DutchDataset(
         x=np.hstack((x_test, np.ones((x_test.shape[0], 1)))).astype(np.float32),
         z=z_test.astype(np.float32),
         y=y_test.astype(np.float32),
