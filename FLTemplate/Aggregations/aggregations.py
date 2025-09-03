@@ -1,10 +1,12 @@
 from logging import INFO
+from typing import Any
 
 from flwr.common.logger import log
 
 
 class Aggregation:
-    def agg_metrics_test(metrics: list, server_round: int, wandb_run) -> dict:
+    @staticmethod
+    def agg_metrics_test(metrics: list, server_round: int, wandb_run: Any) -> dict:
         total_examples = sum([n_examples for n_examples, _ in metrics])
 
         loss_test = sum([n_examples * metric["loss"] for n_examples, metric in metrics]) / total_examples
@@ -40,7 +42,8 @@ class Aggregation:
 
         return agg_metrics
 
-    def agg_metrics_evaluation(metrics: list, server_round: int, wandb_run) -> dict:
+    @staticmethod
+    def agg_metrics_evaluation(metrics: list, server_round: int, wandb_run: Any) -> dict:
         total_examples = sum([n_examples for n_examples, _ in metrics])
         agg_metrics = {}
         loss_evaluation = sum([n_examples * metric["loss"] for n_examples, metric in metrics]) / total_examples
@@ -70,7 +73,8 @@ class Aggregation:
 
         return agg_metrics
 
-    def agg_metrics_train(metrics: list, server_round: int, fed_dir, wandb_run) -> dict:
+    @staticmethod
+    def agg_metrics_train(metrics: list, server_round: int, fed_dir: Any, wandb_run: Any) -> dict:
         # Collect the losses logged during each epoch in each client
         total_examples = sum([n_examples for n_examples, _ in metrics])
         losses = []

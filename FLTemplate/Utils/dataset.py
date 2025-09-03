@@ -1,7 +1,8 @@
-
+import torch
 from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, Normalize, ToTensor
-from Utils.preferences import Preferences
+
+from .preferences import Preferences
 
 
 def get_mnist_dataloaders(mnist_dataset, batch_size: int):
@@ -29,14 +30,6 @@ def get_tabular_dataloaders(dataset, preferences: Preferences):
         num_workers=0,
         pin_memory=True,
     )
-    val_loader = torch.utils.data.DataLoader(
-        dataset["test"],
-        batch_size=preferences.batch_size,
-        shuffle=False,
-        num_workers=0,
-        pin_memory=True,
-    )
-
     return (train_loader,)
 
 

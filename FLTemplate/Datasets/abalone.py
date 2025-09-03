@@ -11,11 +11,11 @@ class AbaloneDataset(Dataset):
 
     """Custom Dataset for Abalone data"""
 
-    def __init__(self, X, y):
+    def __init__(self, X, y) -> None:
         self.X = torch.FloatTensor(X)
         self.y = torch.FloatTensor(y).view(-1, 1)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.X)
 
     def __getitem__(self, idx):
@@ -45,17 +45,6 @@ def prepare_abalone(
     abalone_df: pd.DataFrame,
     scaler: StandardScaler | None = None,
 ) -> tuple[np.ndarray, np.ndarray, StandardScaler]:
-    column_names = [
-        "Sex",
-        "Length",
-        "Diameter",
-        "Height",
-        "Whole_weight",
-        "Shucked_weight",
-        "Viscera_weight",
-        "Shell_weight",
-        "Rings",
-    ]
 
     # Separate features and target
     X = abalone_df.drop("Rings", axis=1)

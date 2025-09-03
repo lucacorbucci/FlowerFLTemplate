@@ -13,7 +13,7 @@ class RegressionModel(Model):
     A wrapper for PyTorch models that adds fairness-aware training and evaluation.
     """
 
-    def __init__(self, model: nn.Module, optimizer: torch.optim.Optimizer, criterion: nn.Module, device: torch.device):
+    def __init__(self, model: nn.Module, optimizer: torch.optim.Optimizer, criterion: nn.Module, device: torch.device) -> None:
         """
         Initialize the RegressionModel wrapper.
 

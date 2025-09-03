@@ -20,7 +20,7 @@ from Utils.preferences import Preferences
 from Utils.utils import get_params
 
 
-def signal_handler(sig, frame):
+def signal_handler(sig, frame) -> None:
     print("Gracefully stopping your experiment! Keep calm!")
     # global wandb_run
     # if wandb_run:

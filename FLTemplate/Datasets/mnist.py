@@ -14,7 +14,7 @@ class ImageDataset(Dataset):
     """
     Custom Dataset class that handles images, labels, and sensitive attributes."""
 
-    def __init__(self, data, transform):
+    def __init__(self, data, transform) -> None:
         """
         Initialize the dataset.
 
@@ -26,7 +26,7 @@ class ImageDataset(Dataset):
         self.data = data
         self.transform = transform
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Return the size of the dataset."""
         return len(self.data)
 

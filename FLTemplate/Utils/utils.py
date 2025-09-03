@@ -4,7 +4,7 @@ import torch
 
 
 # Two auxhiliary functions to set and extract parameters of a model
-def set_params(model, parameters):
+def set_params(model, parameters) -> None:
     """Replace model parameters with those passed as `parameters`."""
     params_dict = zip(model.state_dict().keys(), parameters, strict=False)
     state_dict = OrderedDict({k: torch.from_numpy(v) for k, v in params_dict})

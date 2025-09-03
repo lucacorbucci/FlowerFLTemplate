@@ -2,7 +2,7 @@ from torch.utils.data import Dataset
 
 
 class TabularDataset(Dataset):
-    def __init__(self, x, z, y):
+    def __init__(self, x, z, y) -> None:
         """
         Initialize the custom dataset with x (features), z (sensitive values), and y (targets).
 
@@ -17,7 +17,7 @@ class TabularDataset(Dataset):
         self.targets = y
         self.indexes = range(len(self.samples))
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.samples)
 
     def __getitem__(self, idx):
