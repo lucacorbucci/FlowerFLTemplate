@@ -17,11 +17,11 @@ Federated Averaging (FedAvg) [McMahan et al., 2016] strategy.
 
 Paper: arxiv.org/abs/1602.05629
 """
-
 from collections.abc import Callable
 from logging import WARNING
 from typing import Any
 
+from ClientManager.client_manager import SimpleClientManager
 from flwr.common import (
     EvaluateIns,
     EvaluateRes,
@@ -35,7 +35,6 @@ from flwr.common import (
     parameters_to_ndarrays,
 )
 from flwr.common.logger import log
-from flwr.server.client_manager import ClientManager
 from flwr.server.client_proxy import ClientProxy
 from flwr.server.strategy.aggregate import aggregate, aggregate_inplace, weighted_loss_avg
 from flwr.server.strategy.strategy import Strategy
@@ -150,7 +149,7 @@ class FedAvg(Strategy):
         num_clients = int(num_available_clients * self.fraction_evaluate)
         return max(num_clients, self.min_evaluate_clients), self.min_available_clients
 
-    def initialize_parameters(self, client_manager: ClientManager) -> Parameters | None:
+    def initialize_parameters(self, client_manager: SimpleClientManager) -> Parameters | None:
         """Initialize global model parameters."""
         initial_parameters = self.initial_parameters
         self.initial_parameters = None  # Don't keep initial parameters in memory
@@ -169,7 +168,7 @@ class FedAvg(Strategy):
         return loss, metrics
 
     def configure_fit(
-        self, server_round: int, parameters: Parameters, client_manager: ClientManager
+        self, server_round: int, parameters: Parameters, client_manager: SimpleClientManager
     ) -> list[tuple[ClientProxy, FitIns]]:
         """Configure the next round of training."""
         config = {}
@@ -190,7 +189,7 @@ class FedAvg(Strategy):
         return [(client, fit_ins) for client in clients]
 
     def configure_evaluate(
-        self, server_round: int, parameters: Parameters, client_manager: ClientManager
+        self, server_round: int, parameters: Parameters, client_manager: SimpleClientManager
     ) -> list[tuple[ClientProxy, EvaluateIns]]:
         """Configure the next round of evaluation."""
         # Do not configure federated evaluation if fraction eval is 0.
@@ -216,7 +215,7 @@ class FedAvg(Strategy):
         return [(client, evaluate_ins) for client in clients]
 
     def configure_test(
-        self, server_round: int, parameters: Parameters, client_manager: ClientManager
+        self, server_round: int, parameters: Parameters, client_manager: SimpleClientManager
     ) -> list[tuple[ClientProxy, EvaluateIns]]:
         """Configure the next round of evaluation."""
         # Do not configure federated evaluation if fraction eval is 0.

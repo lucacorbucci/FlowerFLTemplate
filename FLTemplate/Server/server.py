@@ -3,6 +3,7 @@ import io
 import timeit
 from logging import INFO, WARNING
 
+from ClientManager.client_manager import SimpleClientManager
 from flwr.common import (
     Code,
     DisconnectRes,
@@ -16,7 +17,6 @@ from flwr.common import (
 )
 from flwr.common.logger import log
 from flwr.common.typing import GetParametersIns
-from flwr.server.client_manager import ClientManager, SimpleClientManager
 from flwr.server.client_proxy import ClientProxy
 from flwr.server.history import History
 from flwr.server.server_config import ServerConfig
@@ -44,11 +44,11 @@ class Server:
     def __init__(
         self,
         *,
-        client_manager: ClientManager,
+        client_manager: SimpleClientManager,
         preferences: Preferences,
         strategy: Strategy | None = None,
     ) -> None:
-        self._client_manager: ClientManager = client_manager
+        self._client_manager: SimpleClientManager = client_manager
         self.parameters: Parameters = Parameters(tensors=[], tensor_type="numpy.ndarray")
         self.strategy: Strategy = strategy if strategy is not None else FedAvg()
         self.max_workers: int | None = None
@@ -62,7 +62,7 @@ class Server:
         """Replace server strategy."""
         self.strategy = strategy
 
-    def client_manager(self) -> ClientManager:
+    def client_manager(self) -> SimpleClientManager:
         """Return ClientManager."""
         return self._client_manager
 
@@ -474,27 +474,27 @@ def _handle_finished_future_after_evaluate(
     failures.append(result)
 
 
-def init_defaults(
-    server: Server | None,
-    config: ServerConfig | None,
-    strategy: Strategy | None,
-    client_manager: ClientManager | None,
-) -> tuple[Server, ServerConfig]:
-    """Create server instance if none was given."""
-    if server is None:
-        if client_manager is None:
-            client_manager = SimpleClientManager()
-        if strategy is None:
-            strategy = FedAvg()
-        server = Server(client_manager=client_manager, strategy=strategy)
-    elif strategy is not None:
-        log(WARNING, "Both server and strategy were provided, ignoring strategy")
+# def init_defaults(
+#     server: Server | None,
+#     config: ServerConfig | None,
+#     strategy: Strategy | None,
+#     client_manager: SimpleClientManager | None,
+# ) -> tuple[Server, ServerConfig]:
+#     """Create server instance if none was given."""
+#     if server is None:
+#         if client_manager is None:
+#             client_manager = SimpleClientManager()
+#         if strategy is None:
+#             strategy = FedAvg()
+#         server = Server(client_manager=client_manager, strategy=strategy)
+#     elif strategy is not None:
+#         log(WARNING, "Both server and strategy were provided, ignoring strategy")
 
-    # Set default config values
-    if config is None:
-        config = ServerConfig()
+#     # Set default config values
+#     if config is None:
+#         config = ServerConfig()
 
-    return server, config
+#     return server, config
 
 
 def run_fl(

@@ -33,7 +33,7 @@ class SimpleModel(Model):
         self,
         trainloader: DataLoader,
         epochs: int,
-    ) -> (float, float):
+    ) -> dict[str, float]:
         """
         Train the model with optional fairness regularization.
 
@@ -69,7 +69,7 @@ class SimpleModel(Model):
         accuracy = correct / len(trainloader.dataset)
         return {"loss": loss.item(), "accuracy": accuracy}
 
-    def evaluate(self, testloader: DataLoader) -> (float, float):
+    def evaluate(self, testloader: DataLoader) -> dict[str, float]:
         """
         Evaluate the model on a dataset.
 

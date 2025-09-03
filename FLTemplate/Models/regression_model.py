@@ -35,7 +35,7 @@ class RegressionModel(Model):
         self,
         trainloader: DataLoader,
         epochs: int,
-    ) -> (float, float):
+    ) -> dict[str, float]:
         """
         Train the model with optional fairness regularization.
 
@@ -67,7 +67,7 @@ class RegressionModel(Model):
         loss = torch.tensor(losses / len(trainloader), device=self.device)
         return {"loss": loss.item()}
 
-    def evaluate(self, testloader: DataLoader) -> (float, float):
+    def evaluate(self, testloader: DataLoader) -> dict[str, float]:
         """
         Evaluate the model on a dataset.
 
