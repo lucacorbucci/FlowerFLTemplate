@@ -69,15 +69,13 @@ class LinearClassificationNet(nn.Module):
 
 class SimpleMNISTModel(nn.Module):
     """
-    Simple fully connected model for MNIST digit classification.
+    A simpler fully connected model for MNIST.
     """
     def __init__(self, num_classes=10):
         super(SimpleMNISTModel, self).__init__()
         
-        self.fc1 = nn.Linear(28 * 28, 512)
-        self.fc2 = nn.Linear(512, 256)
-        self.fc3 = nn.Linear(256, num_classes)
-        self.dropout = nn.Dropout(0.2)
+        self.fc1 = nn.Linear(28 * 28, 128)
+        self.fc2 = nn.Linear(128, num_classes)
         
     def forward(self, x):
         # Flatten the input
@@ -85,10 +83,7 @@ class SimpleMNISTModel(nn.Module):
         
         # Pass through layers
         x = F.relu(self.fc1(x))
-        x = self.dropout(x)
-        x = F.relu(self.fc2(x))
-        x = self.dropout(x)
-        x = self.fc3(x)
+        x = self.fc2(x)
         
         return x
 
