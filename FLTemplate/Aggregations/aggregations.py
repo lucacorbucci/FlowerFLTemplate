@@ -1,8 +1,5 @@
-import logging
 from logging import INFO
 
-import numpy as np
-import wandb
 from flwr.common.logger import log
 
 

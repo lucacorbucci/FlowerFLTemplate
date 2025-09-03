@@ -1,11 +1,12 @@
 import torch
-import torch.nn as nn
+from torch import nn
 from torch.utils.data import DataLoader
 
 from Models.model import Model
 
 
 class SimpleModel(Model):
+
     """
     A wrapper for PyTorch models that adds fairness-aware training and evaluation.
     """
@@ -20,6 +21,7 @@ class SimpleModel(Model):
                                                          Adam will be used with default params.
             criterion (nn.Module): Loss function for training, default is cross entropy
             device (torch.device): Device to use for computation (CPU/GPU)
+
         """
         self.model = model
         self.criterion = criterion
@@ -44,6 +46,7 @@ class SimpleModel(Model):
 
         Returns:
             Dict[str, List[float]]: Dictionary of metrics tracked during training
+
         """
         # Initialize tracking metrics
         criterion = torch.nn.CrossEntropyLoss()
@@ -76,6 +79,7 @@ class SimpleModel(Model):
 
         Returns:
             Dict[str, float]: Dictionary of evaluation metrics
+
         """
         self.model.to(self.device)
         self.model.eval()

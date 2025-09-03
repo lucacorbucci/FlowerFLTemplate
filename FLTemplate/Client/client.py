@@ -1,12 +1,11 @@
-from typing import Dict
 
 import torch
-import torch.nn as nn
 from flwr.client import NumPyClient
 from flwr.common import NDArrays, Scalar
 from Models.regression_model import RegressionModel
 from Models.simple_model import SimpleModel
 from Models.utils import get_model
+from torch import nn
 
 # from Training.training import test, train
 from Utils.preferences import Preferences
@@ -37,13 +36,15 @@ class FlowerClient(NumPyClient):
                 device=self.device,
             )
         else:
-            raise ValueError(f"Unknown task type: {self.preferences.task}")
+            error = f"Unknown task type: {self.preferences.task}"
+            raise ValueError(error)
 
     def fit(self, parameters, config):
-        """This method trains the model using the parameters sent by the
+        """
+        This method trains the model using the parameters sent by the
         server on the dataset of this client. At then end, the parameters
-        of the locally trained model are communicated back to the server"""
-
+        of the locally trained model are communicated back to the server
+        """
         # copy parameters sent by the server into client's local model
         set_params(self.model.model, parameters)
 
@@ -54,10 +55,11 @@ class FlowerClient(NumPyClient):
         # return the model parameters to the server as well as extra info (number of training examples in this case)
         return get_params(self.model.model), len(self.trainloader), result_dict
 
-    def evaluate(self, parameters: NDArrays, config: Dict[str, Scalar]):
-        """Evaluate the model sent by the server on this client's
-        local validation set. Then return performance metrics."""
-
+    def evaluate(self, parameters: NDArrays, config: dict[str, Scalar]):
+        """
+        Evaluate the model sent by the server on this client's
+        local validation set. Then return performance metrics.
+        """
         set_params(self.model.model, parameters)
         result_dict = self.model.evaluate(testloader=self.valloader)
         return float(result_dict["loss"]), len(self.valloader), result_dict

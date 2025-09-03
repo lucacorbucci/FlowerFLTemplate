@@ -1,11 +1,5 @@
-import random
 
-import numpy as np
-import pandas as pd
-from scipy.io import arff
-from sklearn.preprocessing import MinMaxScaler
-from torch.utils.data import DataLoader, Dataset
-from torchvision import transforms
+from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, Normalize, ToTensor
 from Utils.preferences import Preferences
 

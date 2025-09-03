@@ -89,36 +89,35 @@ def prepare_dutch_for_cross_silo(preferences: Preferences, partition):
         val_loader = DataLoader(val_dataset, batch_size=preferences.batch_size, shuffle=False)
 
         return FlowerClient(trainloader=trainloader, valloader=val_loader, preferences=preferences).to_client()
-    else:
-        print("[Preparing data for cross-silo...]")
-        train = partition_train_test["train"].to_pandas()
-        test = partition_train_test["test"].to_pandas()
+    print("[Preparing data for cross-silo...]")
+    train = partition_train_test["train"].to_pandas()
+    test = partition_train_test["test"].to_pandas()
 
-        x_train, z_train, y_train, _ = prepare_dutch(
-            dutch_df=train,
-            scaler=preferences.scaler,
-        )
+    x_train, z_train, y_train, _ = prepare_dutch(
+        dutch_df=train,
+        scaler=preferences.scaler,
+    )
 
-        x_test, z_test, y_test, _ = prepare_dutch(
-            dutch_df=test,
-            scaler=preferences.scaler,
-        )
+    x_test, z_test, y_test, _ = prepare_dutch(
+        dutch_df=test,
+        scaler=preferences.scaler,
+    )
 
-        train_dataset = TabularDataset(
-            x=np.hstack((x_train, np.ones((x_train.shape[0], 1)))).astype(np.float32),
-            z=z_train.astype(np.float32),
-            y=y_train.astype(np.float32),
-        )
-        test_dataset = TabularDataset(
-            x=np.hstack((x_test, np.ones((x_test.shape[0], 1)))).astype(np.float32),
-            z=z_test.astype(np.float32),
-            y=y_test.astype(np.float32),
-        )
+    train_dataset = TabularDataset(
+        x=np.hstack((x_train, np.ones((x_train.shape[0], 1)))).astype(np.float32),
+        z=z_train.astype(np.float32),
+        y=y_train.astype(np.float32),
+    )
+    test_dataset = TabularDataset(
+        x=np.hstack((x_test, np.ones((x_test.shape[0], 1)))).astype(np.float32),
+        z=z_test.astype(np.float32),
+        y=y_test.astype(np.float32),
+    )
 
-        print("Train dataset size:", len(train_dataset))
-        print("Test dataset size:", len(test_dataset))
+    print("Train dataset size:", len(train_dataset))
+    print("Test dataset size:", len(test_dataset))
 
-        trainloader = DataLoader(train_dataset, batch_size=preferences.batch_size, shuffle=True)
-        test_loader = DataLoader(test_dataset, batch_size=preferences.batch_size, shuffle=False)
+    trainloader = DataLoader(train_dataset, batch_size=preferences.batch_size, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=preferences.batch_size, shuffle=False)
 
-        return FlowerClient(trainloader=trainloader, valloader=test_loader, preferences=preferences).to_client()
+    return FlowerClient(trainloader=trainloader, valloader=test_loader, preferences=preferences).to_client()

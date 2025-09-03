@@ -2,13 +2,13 @@ import numpy as np
 import pandas as pd
 import torch
 from Client.client import FlowerClient
-from Datasets.tabular_datasets import TabularDataset
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from torch.utils.data import DataLoader, Dataset
 from Utils.preferences import Preferences
 
 
 class AbaloneDataset(Dataset):
+
     """Custom Dataset for Abalone data"""
 
     def __init__(self, X, y):
@@ -29,9 +29,11 @@ def get_abalone_scaler(
     validation_seed: int | None = None,
 ) -> StandardScaler:
     if abalone_df is None:
-        raise ValueError("abalone_df cannot be None")
+        error = "abalone_df cannot be None"
+        raise ValueError(error)
     if type(abalone_df) is not pd.DataFrame:
-        raise ValueError("abalone_df must be a pandas DataFrame")
+        error = "abalone_df must be a pandas DataFrame"
+        raise ValueError(error)
 
     _, _, scaler = prepare_abalone(
         abalone_df=abalone_df,
@@ -110,34 +112,33 @@ def prepare_abalone_for_cross_silo(preferences: Preferences, partition):
         val_loader = DataLoader(val_dataset, batch_size=preferences.batch_size, shuffle=False)
 
         return FlowerClient(trainloader=trainloader, valloader=val_loader, preferences=preferences).to_client()
-    else:
-        print("[Preparing data for cross-silo...]")
-        train = partition_train_test["train"].to_pandas()
-        test = partition_train_test["test"].to_pandas()
+    print("[Preparing data for cross-silo...]")
+    train = partition_train_test["train"].to_pandas()
+    test = partition_train_test["test"].to_pandas()
 
-        x_train, y_train, _ = prepare_abalone(
-            abalone_df=train,
-            scaler=preferences.scaler,
-        )
+    x_train, y_train, _ = prepare_abalone(
+        abalone_df=train,
+        scaler=preferences.scaler,
+    )
 
-        x_test, y_test, _ = prepare_abalone(
-            abalone_df=test,
-            scaler=preferences.scaler,
-        )
+    x_test, y_test, _ = prepare_abalone(
+        abalone_df=test,
+        scaler=preferences.scaler,
+    )
 
-        train_dataset = AbaloneDataset(
-            X=x_train,
-            y=y_train,
-        )
-        test_dataset = AbaloneDataset(
-            X=x_test,
-            y=y_test,
-        )
+    train_dataset = AbaloneDataset(
+        X=x_train,
+        y=y_train,
+    )
+    test_dataset = AbaloneDataset(
+        X=x_test,
+        y=y_test,
+    )
 
-        print("Train dataset size:", len(train_dataset))
-        print("Test dataset size:", len(test_dataset))
+    print("Train dataset size:", len(train_dataset))
+    print("Test dataset size:", len(test_dataset))
 
-        trainloader = DataLoader(train_dataset, batch_size=preferences.batch_size, shuffle=True)
-        test_loader = DataLoader(test_dataset, batch_size=preferences.batch_size, shuffle=False)
+    trainloader = DataLoader(train_dataset, batch_size=preferences.batch_size, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=preferences.batch_size, shuffle=False)
 
-        return FlowerClient(trainloader=trainloader, valloader=test_loader, preferences=preferences).to_client()
+    return FlowerClient(trainloader=trainloader, valloader=test_loader, preferences=preferences).to_client()

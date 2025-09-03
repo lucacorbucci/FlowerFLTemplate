@@ -79,9 +79,8 @@ def prepare_data_for_cross_device(context: Context, partition, preferences: Pref
 def prepare_data_for_cross_silo(context: Context, partition, preferences: Preferences):
     if preferences.dataset_name == "dutch":
         return prepare_dutch_for_cross_silo(preferences, partition)
-    elif preferences.dataset_name == "mnist":
+    if preferences.dataset_name == "mnist":
         return prepare_mnist_for_cross_silo(preferences, partition)
-    elif preferences.dataset_name == "abalone":
+    if preferences.dataset_name == "abalone":
         return prepare_abalone_for_cross_silo(preferences, partition)
-    else:
-        raise ValueError(f"Unsupported dataset: {preferences.dataset_name}")
+    raise ValueError(f"Unsupported dataset: {preferences.dataset_name}")

@@ -1,10 +1,9 @@
-import torch
-import torch.nn as nn
 import torch.nn.functional as F
 from torch import Tensor, nn
 
 
 class LinearClassificationNet(nn.Module):
+
     """
     A fully-connected single-layer linear NN for classification.
     """
@@ -19,6 +18,7 @@ class LinearClassificationNet(nn.Module):
 
 
 class AbaloneNet(nn.Module):
+
     """Neural Network for Abalone age prediction"""
 
     def __init__(self, input_size, hidden_sizes=[128, 64, 32], dropout_rate=0.2):
@@ -43,6 +43,7 @@ class AbaloneNet(nn.Module):
 
 
 class SimpleMNISTModel(nn.Module):
+
     """
     A simpler fully connected model for MNIST.
     """
@@ -65,6 +66,7 @@ class SimpleMNISTModel(nn.Module):
 
 
 class CelebaNet(nn.Module):
+
     """This class defines the CelebaNet."""
 
     def __init__(
@@ -73,13 +75,15 @@ class CelebaNet(nn.Module):
         num_classes: int = 2,
         dropout_rate: float = 0,
     ) -> None:
-        """Initializes the CelebaNet network.
+        """
+        Initializes the CelebaNet network.
 
         Args:
         ----
             in_channels (int, optional): Number of input channels . Defaults to 3.
             num_classes (int, optional): Number of classes . Defaults to 2.
             dropout_rate (float, optional): _description_. Defaults to 0.2.
+
         """
         super().__init__()
         self.cnn1 = nn.Conv2d(
@@ -99,14 +103,16 @@ class CelebaNet(nn.Module):
         # self.dropout = nn.Dropout(dropout_rate)
 
     def forward(self, input_data: Tensor) -> Tensor:
-        """Defines the forward pass of the network.
+        """
+        Defines the forward pass of the network.
 
         Args:
             input_data (Tensor): Input data
 
-        Returns
+        Returns:
         -------
             Tensor: Output data
+
         """
         out = self.gn_relu(self.cnn1(input_data))
         out = self.gn_relu(self.cnn2(out))

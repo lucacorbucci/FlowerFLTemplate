@@ -1,15 +1,12 @@
 from collections import OrderedDict
-from typing import List, Tuple
 
 import torch
-from flwr.common import Metrics
 
 
 # Two auxhiliary functions to set and extract parameters of a model
 def set_params(model, parameters):
     """Replace model parameters with those passed as `parameters`."""
-
-    params_dict = zip(model.state_dict().keys(), parameters)
+    params_dict = zip(model.state_dict().keys(), parameters, strict=False)
     state_dict = OrderedDict({k: torch.from_numpy(v) for k, v in params_dict})
     # now replace the parameters
     model.load_state_dict(state_dict, strict=True)

@@ -80,7 +80,8 @@ def get_partitioner(preferences):
                 partition_by=preferences.partitioner_by,
             )
         case _:
-            raise ValueError(f"Unsupported partitioner type: {partitioner_type}")
+            error = f"Unsupported partitioner type: {partitioner_type}"
+            raise ValueError(error)
 
 
 def prepare_data(preferences: Preferences):
@@ -96,14 +97,16 @@ def prepare_data(preferences: Preferences):
         preferences.scaler = data_info.get("scaler", None)
         dataset_dict = load_dataset("csv", data_files=preferences.dataset_path)
     else:
-        raise ValueError(f"Unsupported dataset: {preferences.dataset_name}")
+        error = f"Unsupported dataset: {preferences.dataset_name}"
+        raise ValueError(error)
 
     data = dataset_dict["train"]
     if data:
         partitioner = get_partitioner(preferences)
         partitioner.dataset = data
     else:
-        raise ValueError("No training data found in the dataset")
+        error = "No training data found in the dataset"
+        raise ValueError(error)
 
     if args.partitioner_by:
         plot, _, _ = plot_label_distributions(

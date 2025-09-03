@@ -1,10 +1,11 @@
 from abc import ABC, abstractmethod
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 
 class Model(ABC):
+
     """
     A wrapper for PyTorch models that adds fairness-aware training and evaluation.
     """
