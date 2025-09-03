@@ -48,7 +48,9 @@ class Aggregation:
         agg_metrics = {}
         loss_evaluation = sum([n_examples * metric["loss"] for n_examples, metric in metrics]) / total_examples
         if metrics[0][1].get("accuracy"):
-            accuracy_evaluation = sum([n_examples * metric["accuracy"] for n_examples, metric in metrics]) / total_examples
+            accuracy_evaluation = (
+                sum([n_examples * metric["accuracy"] for n_examples, metric in metrics]) / total_examples
+            )
 
             agg_metrics["Validation Loss"] = loss_evaluation
             agg_metrics["Validation_Accuracy"] = accuracy_evaluation
@@ -106,7 +108,7 @@ class Aggregation:
                 # "Train Loss with Regularization": sum(losses_with_regularization) / total_examples,
                 "FL Round": server_round,
             }
-        else: 
+        else:
             log(
                 INFO,
                 f"Train Loss {sum(losses) / total_examples}",

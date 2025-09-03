@@ -10,15 +10,17 @@ from Utils.preferences import Preferences
 
 class AbaloneDataset(Dataset):
     """Custom Dataset for Abalone data"""
+
     def __init__(self, X, y):
         self.X = torch.FloatTensor(X)
         self.y = torch.FloatTensor(y).view(-1, 1)
-    
+
     def __len__(self):
         return len(self.X)
-    
+
     def __getitem__(self, idx):
         return self.X[idx], -1, self.y[idx]
+
 
 def get_abalone_scaler(
     sweep: bool,
@@ -31,7 +33,7 @@ def get_abalone_scaler(
     if type(abalone_df) is not pd.DataFrame:
         raise ValueError("abalone_df must be a pandas DataFrame")
 
-    _, _,  scaler = prepare_abalone(
+    _, _, scaler = prepare_abalone(
         abalone_df=abalone_df,
     )
     return scaler
@@ -42,27 +44,31 @@ def prepare_abalone(
     scaler: StandardScaler | None = None,
 ) -> tuple[np.ndarray, np.ndarray, StandardScaler]:
     column_names = [
-        'Sex', 'Length', 'Diameter', 'Height', 'Whole_weight',
-        'Shucked_weight', 'Viscera_weight', 'Shell_weight', 'Rings'
+        "Sex",
+        "Length",
+        "Diameter",
+        "Height",
+        "Whole_weight",
+        "Shucked_weight",
+        "Viscera_weight",
+        "Shell_weight",
+        "Rings",
     ]
-    
+
     # Separate features and target
-    X = abalone_df.drop('Rings', axis=1)
-    y_train = abalone_df['Rings'].values  # Age = Rings + 1.5, but we'll predict rings directly
-    
+    X = abalone_df.drop("Rings", axis=1)
+    y_train = abalone_df["Rings"].values  # Age = Rings + 1.5, but we'll predict rings directly
+
     # Encode categorical variable (Sex)
     le = LabelEncoder()
-    X['Sex'] = le.fit_transform(X['Sex'])
-    
+    X["Sex"] = le.fit_transform(X["Sex"])
+
     # Convert to numpy array
     X = X.values
-    
 
     # Scale the features
     scaler = StandardScaler()
     x_train = scaler.fit_transform(X)
-
-    
 
     print(f"\nTraining set size: {x_train.shape[0]}")
     print(f"Number of features: {x_train.shape[1]}")
@@ -75,19 +81,18 @@ def prepare_abalone_for_cross_silo(preferences: Preferences, partition):
     if preferences.sweep:
         print("[Preparing data for cross-silo for sweep...]")
 
-
         partition_loader_train_val = partition_train_test["train"].train_test_split(
             test_size=0.2, seed=preferences.node_shuffle_seed
         )
         train = partition_loader_train_val["train"].to_pandas()
         val = partition_loader_train_val["test"].to_pandas()
 
-        x_train,  y_train, _ = prepare_abalone(
+        x_train, y_train, _ = prepare_abalone(
             abalone_df=train,
             scaler=preferences.scaler,
         )
 
-        x_val,  y_val, _ = prepare_abalone(
+        x_val, y_val, _ = prepare_abalone(
             abalone_df=val,
             scaler=preferences.scaler,
         )

@@ -12,13 +12,7 @@ class RegressionModel(Model):
     A wrapper for PyTorch models that adds fairness-aware training and evaluation.
     """
 
-    def __init__(
-        self,
-        model: nn.Module,
-        optimizer: torch.optim.Optimizer,
-        criterion: nn.Module,
-        device: torch.device
-    ):
+    def __init__(self, model: nn.Module, optimizer: torch.optim.Optimizer, criterion: nn.Module, device: torch.device):
         """
         Initialize the RegressionModel wrapper.
 
@@ -54,7 +48,7 @@ class RegressionModel(Model):
             Dict[str, List[float]]: Dictionary of metrics tracked during training
         """
         # Initialize tracking metrics
-        
+
         self.model.to(self.device)
         self.model.train()
         losses = 0.0
@@ -64,7 +58,7 @@ class RegressionModel(Model):
             output = self.model(sample)
             loss = self.criterion(output, labels)
             loss.backward()
-            self.optimizer.step()   
+            self.optimizer.step()
             losses += loss.item()
 
         loss = torch.tensor(losses / len(trainloader), device=self.device)
@@ -107,4 +101,4 @@ class RegressionModel(Model):
 
         loss = torch.tensor(losses / len(testloader), device=self.device)
 
-        return {"loss": loss.item(), 'rmse': rmse, 'mae': mae, 'r2': r2, 'mse': mse}
+        return {"loss": loss.item(), "rmse": rmse, "mae": mae, "r2": r2, "mse": mse}

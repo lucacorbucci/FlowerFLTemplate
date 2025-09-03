@@ -24,17 +24,17 @@ class FlowerClient(NumPyClient):
         trained_model = get_model(dataset=preferences.dataset_name)
         if self.preferences.task == "classification":
             self.model = SimpleModel(
-                model = trained_model,
-                optimizer = get_optimizer(trained_model, self.preferences),
-                criterion = nn.CrossEntropyLoss(),
-                device = self.device
+                model=trained_model,
+                optimizer=get_optimizer(trained_model, self.preferences),
+                criterion=nn.CrossEntropyLoss(),
+                device=self.device,
             )
         elif self.preferences.task == "regression":
             self.model = RegressionModel(
-                model = trained_model,
-                optimizer = get_optimizer(trained_model, self.preferences),
-                criterion = nn.MSELoss(),
-                device = self.device
+                model=trained_model,
+                optimizer=get_optimizer(trained_model, self.preferences),
+                criterion=nn.MSELoss(),
+                device=self.device,
             )
         else:
             raise ValueError(f"Unknown task type: {self.preferences.task}")
@@ -61,5 +61,3 @@ class FlowerClient(NumPyClient):
         set_params(self.model.model, parameters)
         result_dict = self.model.evaluate(testloader=self.valloader)
         return float(result_dict["loss"]), len(self.valloader), result_dict
-
-

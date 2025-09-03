@@ -36,5 +36,3 @@ def get_model(
 
     else:
         raise ValueError(f"Dataset {dataset} not supported")
-
-

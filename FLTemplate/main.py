@@ -38,6 +38,7 @@ def client_fn(context: Context):
 
     return prepare_data_for_cross_silo(context, partition, preferences)
 
+
 def server_fn(context: Context):
     # instantiate the model
     model = get_model(dataset=preferences.dataset_name)
@@ -48,7 +49,9 @@ def server_fn(context: Context):
     # Define the strategy
     strategy = FedAvg(
         fraction_fit=preferences.sampled_training_nodes_per_round,  # 10% clients sampled each round to do fit()
-        fraction_evaluate=preferences.sampled_validation_nodes_per_round if preferences.sampled_validation_nodes_per_round > 0 else preferences.sampled_test_nodes_per_round,  # 50% clients sample each round to do evaluate()
+        fraction_evaluate=preferences.sampled_validation_nodes_per_round
+        if preferences.sampled_validation_nodes_per_round > 0
+        else preferences.sampled_test_nodes_per_round,  # 50% clients sample each round to do evaluate()
         initial_parameters=global_model_init,  # initialised global model
         fit_metrics_aggregation_fn=Aggregation.agg_metrics_train,
         evaluate_metrics_aggregation_fn=Aggregation.agg_metrics_evaluation,
@@ -63,6 +66,7 @@ def server_fn(context: Context):
     # Wrap everything into a `ServerAppComponents` object
     return ServerAppComponents(server=server, config=config)
 
+
 def get_partitioner(preferences):
     partitioner_type = preferences.partitioner_type
 
@@ -71,7 +75,9 @@ def get_partitioner(preferences):
             return IidPartitioner(num_partitions=preferences.num_clients)
         case "non_iid":
             return DirichletPartitioner(
-                num_partitions=args.num_clients, alpha=preferences.partitioner_alpha, partition_by=preferences.partitioner_by,
+                num_partitions=args.num_clients,
+                alpha=preferences.partitioner_alpha,
+                partition_by=preferences.partitioner_by,
             )
         case _:
             raise ValueError(f"Unsupported partitioner type: {partitioner_type}")
@@ -91,7 +97,7 @@ def prepare_data(preferences: Preferences):
         dataset_dict = load_dataset("csv", data_files=preferences.dataset_path)
     else:
         raise ValueError(f"Unsupported dataset: {preferences.dataset_name}")
- 
+
     data = dataset_dict["train"]
     if data:
         partitioner = get_partitioner(preferences)
@@ -101,18 +107,17 @@ def prepare_data(preferences: Preferences):
 
     if args.partitioner_by:
         plot, _, _ = plot_label_distributions(
-                partitioner=partitioner,
-                label_name=args.partitioner_by,
-                plot_type="bar",
-                size_unit="absolute",
-                partition_id_axis="x",
-                legend=True,
-                verbose_labels=True,
-                max_num_partitions=args.num_clients,
-                title="Per Partition Labels Distribution",
-
-            )
-        plot.savefig(f"label_distribution_{args.partitioner_by}_{args.partitioner_type}.png",  bbox_inches='tight')
+            partitioner=partitioner,
+            label_name=args.partitioner_by,
+            plot_type="bar",
+            size_unit="absolute",
+            partition_id_axis="x",
+            legend=True,
+            verbose_labels=True,
+            max_num_partitions=args.num_clients,
+            title="Per Partition Labels Distribution",
+        )
+        plot.savefig(f"label_distribution_{args.partitioner_by}_{args.partitioner_type}.png", bbox_inches="tight")
 
     return partitioner
 
@@ -151,8 +156,6 @@ parser.add_argument("--lr", type=float, default=0.01)
 parser.add_argument("--optimizer", type=str, default="adam")
 parser.add_argument("--momentum", type=float, default=0.9)
 parser.add_argument("--weight_decay", type=float, default=1e-5)
-
-
 
 
 if __name__ == "__main__":

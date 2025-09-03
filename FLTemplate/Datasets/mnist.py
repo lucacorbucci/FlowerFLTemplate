@@ -1,4 +1,3 @@
-
 import os
 
 import numpy as np
@@ -16,6 +15,7 @@ from Utils.preferences import Preferences
 class ImageDataset(Dataset):
     """
     Custom Dataset class that handles images, labels, and sensitive attributes."""
+
     def __init__(self, data, transform):
         """
         Initialize the dataset.
@@ -26,7 +26,6 @@ class ImageDataset(Dataset):
         """
         self.data = data
         self.transform = transform
-
 
     def __len__(self):
         """Return the size of the dataset."""
@@ -46,18 +45,18 @@ class ImageDataset(Dataset):
         example = self.data[idx]
 
         # Extract image, label, and sensitive attribute
-        image = example['image']
-        label = example['label']
-        sensitive_attribute = example.get('sensitive_attribute', -1)
+        image = example["image"]
+        label = example["label"]
+        sensitive_attribute = example.get("sensitive_attribute", -1)
 
         # Apply transforms to the image
         if self.transform:
             image = self.transform(image)
-            
 
         return image, sensitive_attribute, label
 
-def download_mnist(data_root='../data/'):
+
+def download_mnist(data_root="../data/"):
     """
     Downloads the MNIST dataset and saves the images as PNG files
     into separate directories for each class (0-9).
@@ -75,7 +74,7 @@ def download_mnist(data_root='../data/'):
     full_dataset = torch.utils.data.ConcatDataset([mnist_train, mnist_test])
 
     # Create root directory for saving images
-    save_root = os.path.join(data_root, 'MNIST/train/')
+    save_root = os.path.join(data_root, "MNIST/train/")
     if not os.path.exists(save_root):
         os.makedirs(save_root)
 
@@ -89,14 +88,14 @@ def download_mnist(data_root='../data/'):
     for i, (image_tensor, label) in enumerate(full_dataset):
         # Convert the PyTorch tensor to a PIL Image
         # The image tensor is 1x28x28, so we need to squeeze it to 28x28
-        image = Image.fromarray((image_tensor.squeeze() * 255).numpy().astype('uint8'))
-        
+        image = Image.fromarray((image_tensor.squeeze() * 255).numpy().astype("uint8"))
+
         # Define the save path
-        save_path = os.path.join(save_root, str(label), f'{label}_{i}.png')
-        
+        save_path = os.path.join(save_root, str(label), f"{label}_{i}.png")
+
         # Save the image
         image.save(save_path)
-        
+
         # Print progress every 1000 images
         if (i + 1) % 10000 == 0:
             print(f"Saved {i + 1} images...")
@@ -107,17 +106,13 @@ def download_mnist(data_root='../data/'):
 def prepare_mnist(partition, preferences):
     train = partition
 
-    train_dataset = ImageDataset(train, transform=transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize((0.1307,), (0.3081,))
-        ]))
-    trainloader = DataLoader(
-            train_dataset,
-            batch_size=preferences.batch_size,
-            shuffle=True
-        )
-    
+    train_dataset = ImageDataset(
+        train, transform=transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))])
+    )
+    trainloader = DataLoader(train_dataset, batch_size=preferences.batch_size, shuffle=True)
+
     return trainloader
+
 
 def prepare_mnist_for_cross_silo(preferences: Preferences, partition):
     partition_train_test = partition.train_test_split(test_size=0.2, seed=42)
@@ -139,7 +134,6 @@ def prepare_mnist_for_cross_silo(preferences: Preferences, partition):
 
         train = partition_train_test["train"]
         test = partition_train_test["test"]
-
 
         trainloader = prepare_mnist(train, preferences)
         testloader = prepare_mnist(test, preferences)

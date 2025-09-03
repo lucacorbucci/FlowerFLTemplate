@@ -1,4 +1,3 @@
-
 import os
 
 import numpy as np
@@ -49,32 +48,33 @@ def prepare_data_for_cross_device(context: Context, partition, preferences: Pref
     if preferences.dataset_name == "dutch":
         train = partition.to_pandas()
         x_train, z_train, y_train, _ = prepare_dutch(
-                dutch_df=train,
-                scaler=preferences.scaler,
-            )
+            dutch_df=train,
+            scaler=preferences.scaler,
+        )
         train_dataset = TabularDataset(
-                x=np.hstack((x_train, np.ones((x_train.shape[0], 1)))).astype(np.float32),
-                z=z_train.astype(np.float32),
-                y=y_train.astype(np.float32),
-            )
+            x=np.hstack((x_train, np.ones((x_train.shape[0], 1)))).astype(np.float32),
+            z=z_train.astype(np.float32),
+            y=y_train.astype(np.float32),
+        )
         trainloader = DataLoader(train_dataset, batch_size=preferences.batch_size, shuffle=True)
     elif preferences.dataset_name == "mnist":
         trainloader = prepare_mnist(partition, preferences)
     elif preferences.dataset_name == "abalone":
         train = partition.to_pandas()
         x_train, y_train, _ = prepare_abalone(
-                abalone_df=train,
-                scaler=preferences.scaler,
-            )
+            abalone_df=train,
+            scaler=preferences.scaler,
+        )
         train_dataset = AbaloneDataset(
-                X=x_train,
-                y=y_train,
-            )
+            X=x_train,
+            y=y_train,
+        )
         trainloader = DataLoader(train_dataset, batch_size=preferences.batch_size, shuffle=True)
     else:
         raise ValueError(f"Unsupported dataset: {preferences.dataset_name}")
 
     return FlowerClient(trainloader=trainloader, valloader=trainloader, preferences=preferences).to_client()
+
 
 def prepare_data_for_cross_silo(context: Context, partition, preferences: Preferences):
     if preferences.dataset_name == "dutch":
@@ -85,5 +85,3 @@ def prepare_data_for_cross_silo(context: Context, partition, preferences: Prefer
         return prepare_abalone_for_cross_silo(preferences, partition)
     else:
         raise ValueError(f"Unsupported dataset: {preferences.dataset_name}")
-
-    
