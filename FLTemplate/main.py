@@ -47,8 +47,8 @@ def server_fn(context: Context):
 
     # Define the strategy
     strategy = FedAvg(
-        fraction_fit=0.1,  # 10% clients sampled each round to do fit()
-        fraction_evaluate=0.5,  # 50% clients sample each round to do evaluate()
+        fraction_fit=preferences.sampled_training_nodes_per_round,  # 10% clients sampled each round to do fit()
+        fraction_evaluate=preferences.sampled_validation_nodes_per_round if preferences.sampled_validation_nodes_per_round > 0 else preferences.sampled_test_nodes_per_round,  # 50% clients sample each round to do evaluate()
         initial_parameters=global_model_init,  # initialised global model
         fit_metrics_aggregation_fn=Aggregation.agg_metrics_train,
         evaluate_metrics_aggregation_fn=Aggregation.agg_metrics_evaluation,
@@ -140,6 +140,13 @@ parser.add_argument("--partitioner_type", type=str, default="iid")
 parser.add_argument("--partitioner_alpha", type=float, default=None)
 parser.add_argument("--partitioner_by", type=str, default=None)
 
+parser.add_argument("--batch_size", type=int, default=32)
+parser.add_argument("--lr", type=float, default=0.01)
+parser.add_argument("--optimizer", type=str, default="adam")
+parser.add_argument("--momentum", type=float, default=0.9)
+parser.add_argument("--weight_decay", type=float, default=1e-5)
+
+
 
 
 if __name__ == "__main__":
@@ -172,7 +179,11 @@ if __name__ == "__main__":
         dataset_path=args.dataset_path,
         partitioner_type=args.partitioner_type,
         partitioner_alpha=args.partitioner_alpha,
-        partitioner_by=args.partitioner_by
+        partitioner_by=args.partitioner_by,
+        batch_size=args.batch_size,
+        lr=args.lr,
+        optimizer=args.optimizer,
+        momentum=args.momentum,
     )
 
     wandb_run = (

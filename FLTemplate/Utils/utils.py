@@ -18,3 +18,12 @@ def set_params(model, parameters):
 def get_params(model):
     """Extract model parameters as a list of NumPy arrays."""
     return [val.cpu().numpy() for _, val in model.state_dict().items()]
+
+def get_optimizer(model, preferences):
+    match preferences.optimizer.lower():
+        case "sgd":
+            return torch.optim.SGD(model.parameters(), lr=preferences.lr, momentum=preferences.momentum)
+        case "adam":
+            return torch.optim.Adam(model.parameters(), lr=preferences.lr, weight_decay=preferences.weight_decay if hasattr(preferences, 'weight_decay') else 0)
+        case _:
+            raise ValueError(f"Unsupported optimizer: {preferences.optimizer}")
