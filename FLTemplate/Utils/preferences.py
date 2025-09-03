@@ -27,3 +27,8 @@ class Preferences:
     partitioner_type: str = None
     partitioner_alpha: float = None
     partitioner_by: str = None
+
+    batch_size: int = 32
+    lr: float = 0.01
+    optimizer: str = "adam"
+    momentum: float = 0.9
