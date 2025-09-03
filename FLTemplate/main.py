@@ -13,7 +13,7 @@ from flwr.server import ServerApp, ServerAppComponents, ServerConfig
 from flwr.simulation import run_simulation
 from flwr_datasets.partitioner import DirichletPartitioner, IidPartitioner
 from flwr_datasets.visualization import plot_label_distributions
-from Models.models import get_model
+from Models.utils import get_model
 from Server.server import Server
 from Strategy.fed_avg import FedAvg
 from Utils.preferences import Preferences
