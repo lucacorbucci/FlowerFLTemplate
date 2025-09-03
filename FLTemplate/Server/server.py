@@ -474,28 +474,6 @@ def _handle_finished_future_after_evaluate(
     failures.append(result)
 
 
-# def init_defaults(
-#     server: Server | None,
-#     config: ServerConfig | None,
-#     strategy: Strategy | None,
-#     client_manager: SimpleClientManager | None,
-# ) -> tuple[Server, ServerConfig]:
-#     """Create server instance if none was given."""
-#     if server is None:
-#         if client_manager is None:
-#             client_manager = SimpleClientManager()
-#         if strategy is None:
-#             strategy = FedAvg()
-#         server = Server(client_manager=client_manager, strategy=strategy)
-#     elif strategy is not None:
-#         log(WARNING, "Both server and strategy were provided, ignoring strategy")
-
-#     # Set default config values
-#     if config is None:
-#         config = ServerConfig()
-
-#     return server, config
-
 
 def run_fl(
     server: Server,
