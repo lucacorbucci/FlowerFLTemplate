@@ -1,4 +1,5 @@
 import os
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -11,7 +12,7 @@ from torch.utils.data import DataLoader
 from Utils.preferences import Preferences
 
 
-def get_data_info(preferences: Preferences):
+def get_data_info(preferences: Preferences) -> dict[str, Any]:
     match preferences.dataset_name:
         case "dutch":
             df = pd.read_csv(preferences.dataset_path)
@@ -43,7 +44,7 @@ def get_data_info(preferences: Preferences):
             raise ValueError(f"Unsupported dataset: {preferences.dataset_name}")
 
 
-def prepare_data_for_cross_device(context: Context, partition, preferences: Preferences):
+def prepare_data_for_cross_device(context: Context, partition: Any, preferences: Preferences) -> Any:
     if preferences.dataset_name == "dutch":
         train = partition.to_pandas()
         x_train, z_train, y_train, _ = prepare_dutch(
@@ -65,7 +66,7 @@ def prepare_data_for_cross_device(context: Context, partition, preferences: Pref
             scaler=preferences.scaler,
         )
         train_dataset = AbaloneDataset(
-            X=x_train,
+            x=x_train,
             y=y_train,
         )
         trainloader = DataLoader(train_dataset, batch_size=preferences.batch_size, shuffle=True)
@@ -75,7 +76,7 @@ def prepare_data_for_cross_device(context: Context, partition, preferences: Pref
     return FlowerClient(trainloader=trainloader, valloader=trainloader, preferences=preferences).to_client()
 
 
-def prepare_data_for_cross_silo(context: Context, partition, preferences: Preferences):
+def prepare_data_for_cross_silo(context: Context, partition: Any, preferences: Preferences) -> Any:
     if preferences.dataset_name == "dutch":
         return prepare_dutch_for_cross_silo(preferences, partition)
     if preferences.dataset_name == "mnist":

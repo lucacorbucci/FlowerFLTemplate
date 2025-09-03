@@ -2,6 +2,7 @@ from collections import OrderedDict
 
 import torch
 from flwr.common import NDArrays
+from Utils.preferences import Preferences
 
 
 # Two auxhiliary functions to set and extract parameters of a model
@@ -18,7 +19,7 @@ def get_params(model: torch.nn.Module) -> NDArrays:
     return [val.cpu().numpy() for _, val in model.state_dict().items()]
 
 
-def get_optimizer(model: torch.nn.Module, preferences) -> torch.optim.Optimizer:
+def get_optimizer(model: torch.nn.Module, preferences: Preferences) -> torch.optim.Optimizer:
     match preferences.optimizer.lower():
         case "sgd":
             return torch.optim.SGD(model.parameters(), lr=preferences.lr, momentum=preferences.momentum)

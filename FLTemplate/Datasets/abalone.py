@@ -1,3 +1,6 @@
+
+from typing import Any
+
 import numpy as np
 import pandas as pd
 import torch
@@ -11,14 +14,14 @@ class AbaloneDataset(Dataset):
 
     """Custom Dataset for Abalone data"""
 
-    def __init__(self, X, y) -> None:
-        self.X = torch.FloatTensor(X)
+    def __init__(self, x: np.ndarray, y: np.ndarray) -> None:
+        self.x = torch.FloatTensor(x)
         self.y = torch.FloatTensor(y).view(-1, 1)
 
     def __len__(self) -> int:
         return len(self.X)
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx:int) -> tuple[Any, Any, Any]:
         return self.X[idx], -1, self.y[idx]
 
 
@@ -47,19 +50,19 @@ def prepare_abalone(
 ) -> tuple[np.ndarray, np.ndarray, StandardScaler]:
 
     # Separate features and target
-    X = abalone_df.drop("Rings", axis=1)
+    x = abalone_df.drop("Rings", axis=1)
     y_train = abalone_df["Rings"].values  # Age = Rings + 1.5, but we'll predict rings directly
 
     # Encode categorical variable (Sex)
     le = LabelEncoder()
-    X["Sex"] = le.fit_transform(X["Sex"])
+    x["Sex"] = le.fit_transform(x["Sex"])
 
     # Convert to numpy array
-    X = X.values
+    x = x.values
 
     # Scale the features
     scaler = StandardScaler()
-    x_train = scaler.fit_transform(X)
+    x_train = scaler.fit_transform(x)
 
     print(f"\nTraining set size: {x_train.shape[0]}")
     print(f"Number of features: {x_train.shape[1]}")
@@ -67,7 +70,7 @@ def prepare_abalone(
     return x_train, np.array(y_train), scaler
 
 
-def prepare_abalone_for_cross_silo(preferences: Preferences, partition):
+def prepare_abalone_for_cross_silo(preferences: Preferences, partition: Any) -> Any:
     partition_train_test = partition.train_test_split(test_size=0.2, seed=42)
     if preferences.sweep:
         print("[Preparing data for cross-silo for sweep...]")
@@ -89,11 +92,11 @@ def prepare_abalone_for_cross_silo(preferences: Preferences, partition):
         )
 
         train_dataset = AbaloneDataset(
-            X=x_train,
+            x=x_train,
             y=y_train,
         )
         val_dataset = AbaloneDataset(
-            X=x_val,
+            x=x_val,
             y=y_val,
         )
 
@@ -116,11 +119,11 @@ def prepare_abalone_for_cross_silo(preferences: Preferences, partition):
     )
 
     train_dataset = AbaloneDataset(
-        X=x_train,
+        x=x_train,
         y=y_train,
     )
     test_dataset = AbaloneDataset(
-        X=x_test,
+        x=x_test,
         y=y_test,
     )
 

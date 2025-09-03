@@ -1,4 +1,5 @@
 import os
+from typing import Any
 
 import torch
 import torchvision
@@ -14,7 +15,7 @@ class ImageDataset(Dataset):
     """
     Custom Dataset class that handles images, labels, and sensitive attributes."""
 
-    def __init__(self, data, transform) -> None:
+    def __init__(self, data: Any, transform: Any) -> None:
         """
         Initialize the dataset.
 
@@ -30,7 +31,7 @@ class ImageDataset(Dataset):
         """Return the size of the dataset."""
         return len(self.data)
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx: int) -> tuple[torch.Tensor, int, int]:
         """
         Get a single item from the dataset.
 
@@ -56,7 +57,7 @@ class ImageDataset(Dataset):
         return image, sensitive_attribute, label
 
 
-def download_mnist(data_root="../data/"):
+def download_mnist(data_root: str = "../data/") -> Any:
     """
     Downloads the MNIST dataset and saves the images as PNG files
     into separate directories for each class (0-9).
@@ -104,7 +105,7 @@ def download_mnist(data_root="../data/"):
     return full_dataset
 
 
-def prepare_mnist(partition, preferences):
+def prepare_mnist(partition: Any, preferences: Preferences) -> DataLoader:
     train = partition
 
     train_dataset = ImageDataset(
@@ -115,7 +116,7 @@ def prepare_mnist(partition, preferences):
     return trainloader
 
 
-def prepare_mnist_for_cross_silo(preferences: Preferences, partition):
+def prepare_mnist_for_cross_silo(preferences: Preferences, partition: Any) -> Any:
     partition_train_test = partition.train_test_split(test_size=0.2, seed=42)
     if preferences.sweep:
         print("[Preparing data for cross-silo for sweep...]")

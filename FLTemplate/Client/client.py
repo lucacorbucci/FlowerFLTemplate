@@ -1,3 +1,4 @@
+from typing import Any
 
 import torch
 from flwr.client import NumPyClient
@@ -6,6 +7,7 @@ from Models.regression_model import RegressionModel
 from Models.simple_model import SimpleModel
 from Models.utils import get_model
 from torch import nn
+from torch.utils.data import DataLoader
 
 # from Training.training import test, train
 from Utils.preferences import Preferences
@@ -13,7 +15,7 @@ from Utils.utils import get_optimizer, get_params, set_params
 
 
 class FlowerClient(NumPyClient):
-    def __init__(self, trainloader, valloader, preferences: Preferences) -> None:
+    def __init__(self, trainloader: DataLoader, valloader: DataLoader, preferences: Preferences) -> None:
         super().__init__()
 
         self.trainloader = trainloader
@@ -39,7 +41,7 @@ class FlowerClient(NumPyClient):
             error = f"Unknown task type: {self.preferences.task}"
             raise ValueError(error)
 
-    def fit(self, parameters, config):
+    def fit(self, parameters: NDArrays, config: dict[str, Scalar]) -> tuple[NDArrays, int, dict[str, Any]]:
         """
         This method trains the model using the parameters sent by the
         server on the dataset of this client. At then end, the parameters
@@ -55,7 +57,7 @@ class FlowerClient(NumPyClient):
         # return the model parameters to the server as well as extra info (number of training examples in this case)
         return get_params(self.model.model), len(self.trainloader), result_dict
 
-    def evaluate(self, parameters: NDArrays, config: dict[str, Scalar]):
+    def evaluate(self, parameters: NDArrays, config: dict[str, Scalar]) -> tuple[float, int, dict[str, Any]]:
         """
         Evaluate the model sent by the server on this client's
         local validation set. Then return performance metrics.

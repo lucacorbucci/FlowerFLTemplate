@@ -9,7 +9,7 @@ from Utils.preferences import Preferences
 
 
 class DutchDataset(Dataset):
-    def __init__(self, x, z, y) -> None:
+    def __init__(self, x: np.ndarray, z: np.ndarray, y: np.ndarray) -> None:
         """
         Initialize the custom dataset with x (features), z (sensitive values), and y (targets).
 
@@ -92,7 +92,7 @@ def prepare_dutch(
     return x_train, np.array(z_train), np.array(y_train), scaler
 
 
-def prepare_dutch_for_cross_silo(preferences: Preferences, partition):
+def prepare_dutch_for_cross_silo(preferences: Preferences, partition: Any) -> Any:
     partition_train_test = partition.train_test_split(test_size=0.2, seed=42)
     if preferences.sweep:
         print("[Preparing data for cross-silo for sweep...]")
