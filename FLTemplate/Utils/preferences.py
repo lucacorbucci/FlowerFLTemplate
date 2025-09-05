@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from typing import Any
 
+from sklearn.preprocessing import TargetEncoder
+
 
 @dataclass
 class Preferences:
@@ -25,6 +27,7 @@ class Preferences:
     partitioner_type: str | None = None
     partitioner_alpha: float | None = None
     partitioner_by: str | None = None
+    encoder: TargetEncoder | None = None
 
     task: str = "classification"
 

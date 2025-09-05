@@ -115,7 +115,7 @@ def prepare_mnist(partition: Any, preferences: Preferences) -> DataLoader:
     return trainloader
 
 
-def prepare_mnist_for_cross_silo(preferences: Preferences, partition: Any) -> Any:
+def prepare_mnist_for_cross_silo(preferences: Preferences, partition: Any, partition_id: int) -> Any:
     partition_train_test = partition.train_test_split(test_size=0.2, seed=42)
     if preferences.sweep:
         print("[Preparing data for cross-silo for sweep...]")
@@ -129,7 +129,9 @@ def prepare_mnist_for_cross_silo(preferences: Preferences, partition: Any) -> An
         trainloader = prepare_mnist(train, preferences)
         valloader = prepare_mnist(val, preferences)
 
-        return FlowerClient(trainloader=trainloader, valloader=valloader, preferences=preferences).to_client()
+        return FlowerClient(
+            trainloader=trainloader, valloader=valloader, preferences=preferences, partition_id=partition_id
+        ).to_client()
     print("[Preparing data for cross-silo...]")
 
     train = partition_train_test["train"]
@@ -138,4 +140,6 @@ def prepare_mnist_for_cross_silo(preferences: Preferences, partition: Any) -> An
     trainloader = prepare_mnist(train, preferences)
     testloader = prepare_mnist(test, preferences)
 
-    return FlowerClient(trainloader=trainloader, valloader=testloader, preferences=preferences).to_client()
+    return FlowerClient(
+        trainloader=trainloader, valloader=testloader, preferences=preferences, partition_id=partition_id
+    ).to_client()

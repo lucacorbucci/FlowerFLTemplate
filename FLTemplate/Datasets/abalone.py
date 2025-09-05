@@ -67,7 +67,7 @@ def prepare_abalone(
     return x_train, np.array(y_train), scaler
 
 
-def prepare_abalone_for_cross_silo(preferences: Preferences, partition: Any) -> Any:
+def prepare_abalone_for_cross_silo(preferences: Preferences, partition: Any, partition_id: int) -> Any:
     partition_train_test = partition.train_test_split(test_size=0.2, seed=42)
     if preferences.sweep:
         print("[Preparing data for cross-silo for sweep...]")
@@ -100,7 +100,9 @@ def prepare_abalone_for_cross_silo(preferences: Preferences, partition: Any) -> 
         trainloader = DataLoader(train_dataset, batch_size=preferences.batch_size, shuffle=True)
         val_loader = DataLoader(val_dataset, batch_size=preferences.batch_size, shuffle=False)
 
-        return FlowerClient(trainloader=trainloader, valloader=val_loader, preferences=preferences).to_client()
+        return FlowerClient(
+            trainloader=trainloader, valloader=val_loader, preferences=preferences, partition_id=partition
+        ).to_client()
     print("[Preparing data for cross-silo...]")
     train = partition_train_test["train"].to_pandas()
     test = partition_train_test["test"].to_pandas()

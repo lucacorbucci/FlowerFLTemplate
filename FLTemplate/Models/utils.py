@@ -25,7 +25,7 @@ def get_model(
     if dataset == "dutch":
         return LinearClassificationNet(input_size=12, output_size=2)
     if dataset == "income":
-        return LinearClassificationNet(input_size=54, output_size=2)
+        return LinearClassificationNet(input_size=10, output_size=2)
     if dataset == "adult":
         return LinearClassificationNet(input_size=103, output_size=2)
     if dataset == "mnist":

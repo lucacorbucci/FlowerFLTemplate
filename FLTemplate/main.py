@@ -32,12 +32,15 @@ def signal_handler(sig: int, frame: Any) -> None:
 def client_fn(context: Context) -> Any:
     """Returns a FlowerClient containing its data partition."""
     partition_id = int(context.node_config["partition-id"])
-    partition = partitioner.load_partition(partition_id)
+    if partitioner:
+        partition = partitioner.load_partition(partition_id)
+    else:
+        partition = None
 
     if preferences.cross_device:
-        return prepare_data_for_cross_device(context, partition, preferences)
+        return prepare_data_for_cross_device(context, partition, preferences, partition_id)
 
-    return prepare_data_for_cross_silo(context, partition, preferences)
+    return prepare_data_for_cross_silo(context, partition, preferences, partition_id)
 
 
 def server_fn(context: Context) -> ServerAppComponents:
@@ -97,11 +100,17 @@ def prepare_data(preferences: Preferences) -> Any:
         data_info = get_data_info(preferences)
         preferences.scaler = data_info.get("scaler", None)
         dataset_dict = load_dataset("csv", data_files=preferences.dataset_path)
+    elif preferences.dataset_name == "income":
+        data_info = get_data_info(preferences)
+        preferences.scaler = data_info.get("scaler", None)
+        preferences.encoder = data_info.get("encoder", None)
+        partitioner = None
+        return partitioner
     else:
         error = f"Unsupported dataset: {preferences.dataset_name}"
         raise ValueError(error)
 
-    data = dataset_dict["train"]  # type: ignore
+    data = dataset_dict.get("train", None)  # type: ignore
     if data:
         partitioner = get_partitioner(preferences)
         partitioner.dataset = data

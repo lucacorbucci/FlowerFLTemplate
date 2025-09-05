@@ -15,9 +15,12 @@ from Utils.utils import get_optimizer, get_params, set_params
 
 
 class FlowerClient(NumPyClient):
-    def __init__(self, trainloader: DataLoader, valloader: DataLoader, preferences: Preferences) -> None:
+    def __init__(
+        self, trainloader: DataLoader, valloader: DataLoader, preferences: Preferences, partition_id: int
+    ) -> None:
         super().__init__()
 
+        self.partition_id = partition_id
         self.trainloader = trainloader
         self.valloader = valloader
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
