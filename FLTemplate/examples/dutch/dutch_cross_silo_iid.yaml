@@ -1,0 +1,62 @@
+program: ../../main.py
+method: bayes
+metric:
+  name: Validation_Accuracy
+  goal: maximize
+early_terminate:
+  type: hyperband
+  min_iter: 3
+parameters:
+  batch_size:
+    min: 32
+    max: 512
+  lr:
+    min: 0.0001
+    max: 0.1
+  optimizer:
+    values: ["adam", "sgd"]
+  momentum:
+    min: 0.0
+    max: 0.9
+  weight_decay:
+    min: 0.00001
+    max: 0.001
+  num_epochs:
+    min: 1
+    max: 3
+
+command:
+  - ${env}
+  - uv 
+  - run 
+  - python
+  - ${program}
+  - ${args}
+  - --dataset_name
+  - dutch
+  - --num_rounds
+  - 10
+  - --num_clients
+  - 20
+  - --FL_setting 
+  - cross_silo
+  - --sampled_train_nodes_per_round
+  - 1.0
+  - --sampled_validation_nodes_per_round
+  - 1.0
+  - --sampled_test_nodes_per_round
+  - 0.0
+  - --fed_dir 
+  - ../../../training_data/dutch/ 
+  - --project_name 
+  - TestTemplateFL 
+  - --run_name 
+  - Test 
+  - --wandb 
+  - True 
+  - --dataset_path 
+  - ../../../data/dutch/dutch.csv 
+  - --partitioner_type 
+  - iid 
+  - --sweep
+  - True

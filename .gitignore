@@ -19,3 +19,6 @@ test_ds
 train_ds
 *.pth
 elia/
+old_fltemplate/
+training_data/
+*.txt
