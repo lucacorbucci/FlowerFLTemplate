@@ -24,9 +24,9 @@ from Utils.utils import get_params, seed_everything
 
 def signal_handler(sig: int, frame: Any) -> None:
     print("Gracefully stopping your experiment! Keep calm!")
-    # global wandb_run
-    # if wandb_run:
-    # wandb_run.finish()
+    global wandb_run
+    if wandb_run:
+        wandb_run.finish()
     sys.exit(0)
 
 
@@ -73,6 +73,19 @@ def server_fn(context: Context) -> ServerAppComponents:
 
 
 def get_partitioner(preferences: Preferences) -> Any:
+    """
+    Returns a partitioner based on the specified type in preferences.
+    Supports "iid" and "non_iid" (Dirichlet) partitioning.
+
+    Args:
+        preferences (Preferences): User preferences containing partitioner settings.
+
+    Returns:
+        Any: An instance of the selected partitioner.
+
+    Raises:
+        ValueError: If an unsupported partitioner type is specified.
+    """
     partitioner_type = preferences.partitioner_type
 
     match partitioner_type:
