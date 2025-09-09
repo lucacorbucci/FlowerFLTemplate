@@ -8,10 +8,29 @@ class LinearClassificationNet(nn.Module):
     """
 
     def __init__(self, input_size: int, output_size: int) -> None:
+        """
+        Initializes a single-layer linear neural network for classification.
+
+        Args:
+            input_size (int): Number of input features.
+            output_size (int): Number of output classes.
+
+        Returns:
+            None
+        """
         super().__init__()
         self.layer1 = nn.Linear(input_size, output_size, bias=False)
 
     def forward(self, x: Tensor) -> Tensor:
+        """
+        Performs forward pass through the linear layer.
+
+        Args:
+            x (Tensor): Input tensor of shape (batch_size, input_size).
+
+        Returns:
+            Tensor: Output logits of shape (batch_size, output_size).
+        """
         x = self.layer1(x.float())
         return x
 
@@ -20,6 +39,19 @@ class AbaloneNet(nn.Module):
     """Neural Network for Abalone age prediction"""
 
     def __init__(self, input_size: int, hidden_sizes: list[int] | None = None, dropout_rate: float = 0.2) -> None:
+        """
+        Initializes a multi-layer feedforward network for Abalone regression.
+
+        Builds sequential layers with Linear, ReLU, BatchNorm1d, Dropout; output layer is linear without activation.
+
+        Args:
+            input_size (int): Number of input features.
+            hidden_sizes (list[int] | None): List of hidden layer sizes. Defaults to [128, 64, 32].
+            dropout_rate (float): Dropout probability. Defaults to 0.2.
+
+        Returns:
+            None
+        """
         if hidden_sizes is None:
             hidden_sizes = [128, 64, 32]
         super().__init__()
@@ -39,6 +71,15 @@ class AbaloneNet(nn.Module):
         self.network = nn.Sequential(*layers)
 
     def forward(self, x: Tensor) -> Tensor:
+        """
+        Performs forward pass through the network.
+
+        Args:
+            x (Tensor): Input tensor of shape (batch_size, input_size).
+
+        Returns:
+            Tensor: Output prediction of shape (batch_size, 1).
+        """
         return self.network(x)
 
 
@@ -48,12 +89,32 @@ class SimpleMNISTModel(nn.Module):
     """
 
     def __init__(self, num_classes: int = 10) -> None:
+        """
+        Initializes a simple two-layer fully connected network for MNIST classification.
+
+        Input layer: 784 -> 128 with ReLU; output: 128 -> num_classes.
+
+        Args:
+            num_classes (int, optional): Number of output classes. Defaults to 10.
+
+        Returns:
+            None
+        """
         super().__init__()
 
         self.fc1 = nn.Linear(28 * 28, 128)
         self.fc2 = nn.Linear(128, num_classes)
 
     def forward(self, x: Tensor) -> Tensor:
+        """
+        Performs forward pass: flattens input, applies ReLU after first layer, linear output.
+
+        Args:
+            x (Tensor): Input tensor of shape (batch_size, 1, 28, 28).
+
+        Returns:
+            Tensor: Output logits of shape (batch_size, num_classes).
+        """
         # Flatten the input
         x = x.view(-1, 28 * 28)
 
@@ -74,14 +135,17 @@ class CelebaNet(nn.Module):
         dropout_rate: float = 0,
     ) -> None:
         """
-        Initializes the CelebaNet network.
+        Initializes the CelebaNet CNN for CelebA classification.
+
+        Three conv layers with ReLU and MaxPool; fully connected output. Dropout not used.
 
         Args:
-        ----
-            in_channels (int, optional): Number of input channels . Defaults to 3.
-            num_classes (int, optional): Number of classes . Defaults to 2.
-            dropout_rate (float, optional): _description_. Defaults to 0.2.
+            in_channels (int, optional): Input channels. Defaults to 3 (RGB).
+            num_classes (int, optional): Output classes. Defaults to 2.
+            dropout_rate (float, optional): Dropout rate (unused). Defaults to 0.
 
+        Returns:
+            None
         """
         super().__init__()
         self.cnn1 = nn.Conv2d(
@@ -102,15 +166,13 @@ class CelebaNet(nn.Module):
 
     def forward(self, input_data: Tensor) -> Tensor:
         """
-        Defines the forward pass of the network.
+        Performs forward pass: three conv + ReLU + MaxPool, flatten, linear output.
 
         Args:
-            input_data (Tensor): Input data
+            input_data (Tensor): Input tensor of shape (batch_size, in_channels, height, width).
 
         Returns:
-        -------
-            Tensor: Output data
-
+            Tensor: Output logits of shape (batch_size, num_classes).
         """
         out = self.gn_relu(self.cnn1(input_data))
         out = self.gn_relu(self.cnn2(out))

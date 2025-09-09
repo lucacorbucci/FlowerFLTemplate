@@ -1,3 +1,8 @@
+"""
+Dataclass holding all configuration parameters for federated learning setup.
+
+Includes client numbers, rounds, device/silo settings, sampling fractions, seeds, dataset info, partitioning, training hyperparameters, and preprocessors (scaler/encoder).
+"""
 from dataclasses import dataclass
 from typing import Any
 

@@ -13,13 +13,15 @@ class SimpleClientManager(ClientManager):
 
     def __init__(self, preferences: Preferences = None) -> None:
         """
-        Creates a SimpleClientManager.
+        Initializes a SimpleClientManager instance for managing Flower clients.
 
-        Parameters
-        ----------
-        preferences : Preferences
-            Preferences object containing the configuration for the client manager.
+        Sets up client dictionaries, threading condition, preferences, and lists for training/validation/test clients.
 
+        Args:
+            preferences (Preferences, optional): Configuration preferences for the FL setup. Defaults to None.
+
+        Returns:
+            None
         """
         self.clients: dict[str, ClientProxy] = {}
         self._cv = threading.Condition()
@@ -34,25 +36,30 @@ class SimpleClientManager(ClientManager):
 
     def __len__(self) -> int:
         """
-        Return the number of available clients.
+        Returns the total number of registered clients.
 
-        Returns
-        -------
-        num_available : int
-            The number of currently available clients.
+        Args:
+            None
 
+        Returns:
+            int: The number of currently available clients.
         """
         return len(self.clients)
 
     def num_available(self, phase: str) -> int:
         """
-        Return the number of available clients.
+        Returns the number of available clients for a specific phase.
 
-        Returns
-        -------
-        num_available : int
-            The number of currently available clients.
+        Supports phases: "training", "validation", "test".
 
+        Args:
+            phase (str): The phase to check availability for ("training", "validation", or "test").
+
+        Returns:
+            int: The number of available clients for the specified phase.
+
+        Raises:
+            KeyError: If phase is invalid.
         """
         if phase == "training":
             return len(self.training_clients_list)
@@ -62,27 +69,29 @@ class SimpleClientManager(ClientManager):
 
     def wait_for(self, num_clients: int, timeout: int = 86400) -> bool:
         """
-        Wait until at least `num_clients` are available.
+        Blocks until the specified number of clients are available or timeout is reached.
 
-        Blocks until the requested number of clients is available or until a
-        timeout is reached. Current timeout default: 1 day.
+        Args:
+            num_clients (int): The minimum number of clients to wait for.
+            timeout (int, optional): Maximum wait time in seconds. Defaults to 86400 (24 hours).
 
-        Parameters
-        ----------
-        num_clients : int
-            The number of clients to wait for.
-        timeout : int
-            The time in seconds to wait for, defaults to 86400 (24h).
-
-        Returns
-        -------
-        success : bool
-
+        Returns:
+            bool: True if the required number of clients became available within timeout, False otherwise.
         """
         with self._cv:
             return self._cv.wait_for(lambda: len(self.clients) >= num_clients, timeout=timeout)
 
     def pre_sample_clients(self, fraction: float, client_list: list[str]) -> dict[int, list[str]]:
+        """
+        Pre-samples clients for each round without shuffling, for deterministic sampling.
+
+        Args:
+            fraction (float): Fraction of clients to sample per round.
+            client_list (list[str]): List of client IDs to sample from.
+
+        Returns:
+            dict[int, list[str]]: Dictionary mapping round numbers to lists of sampled client IDs.
+        """
         sampled_nodes = {}
         nodes_to_sample = int(fraction * len(client_list))
         for fl_round in range(self.preferences.num_rounds):
@@ -98,11 +107,16 @@ class SimpleClientManager(ClientManager):
 
     def sample_clients_per_round(self, fraction: float, client_list: list[str]) -> dict[int, list[str]]:
         """
-        Sample clients for each round.
+        Samples clients for each federated learning round based on the fraction.
 
-        This method samples clients for each round based on the preferences set in the
-        SimpleClientManager. It returns a dictionary where the keys are the round numbers
-        and the values are lists of client IDs.
+        Handles wrapping around the client list for sampling. Prints sampling details.
+
+        Args:
+            fraction (float): Fraction of clients to sample per round.
+            client_list (list[str]): List of client IDs to sample from.
+
+        Returns:
+            dict[int, list[str]]: Dictionary mapping round numbers to lists of sampled client IDs.
         """
         sampled_nodes = {}
         nodes_to_sample = int(fraction * len(client_list))
@@ -124,18 +138,18 @@ class SimpleClientManager(ClientManager):
 
     def register(self, client: ClientProxy) -> bool:
         """
-        Register Flower ClientProxy instance.
+        Registers a Flower ClientProxy instance with the manager.
 
-        Parameters
-        ----------
-        client : flwr.server.client_proxy.ClientProxy
+        Assigns a unique random CID if needed, handles cross-device/silo sampling, saves sampled nodes to pickle files, and notifies waiting threads.
 
-        Returns
-        -------
-        success : bool
-            Indicating if registration was successful. False if ClientProxy is
-            already registered or can not be registered for any reason.
+        Args:
+            client (ClientProxy): The client to register.
 
+        Returns:
+            bool: True if registration succeeded, False if already registered.
+
+        Raises:
+            IOError: If pickle file writing fails.
         """
         if client.cid in self.clients:
             return False
@@ -284,14 +298,15 @@ class SimpleClientManager(ClientManager):
 
     def unregister(self, client: ClientProxy) -> None:
         """
-        Unregister Flower ClientProxy instance.
+        Unregisters a Flower ClientProxy instance from the manager.
 
-        This method is idempotent.
+        Idempotent operation; notifies waiting threads if unregistered.
 
-        Parameters
-        ----------
-        client : flwr.server.client_proxy.ClientProxy
+        Args:
+            client (ClientProxy): The client to unregister.
 
+        Returns:
+            None
         """
         if client.cid in self.clients:
             del self.clients[client.cid]
@@ -300,7 +315,15 @@ class SimpleClientManager(ClientManager):
                 self._cv.notify_all()
 
     def all(self) -> dict[str, ClientProxy]:
-        """Return all available clients."""
+        """
+        Returns all registered clients.
+
+        Args:
+            None
+
+        Returns:
+            dict[str, ClientProxy]: Dictionary of all client IDs to ClientProxy instances.
+        """
         return self.clients
 
     def sample(
@@ -310,7 +333,23 @@ class SimpleClientManager(ClientManager):
         min_num_clients: int | None = None,
         criterion: Criterion | None = None,
     ) -> list[ClientProxy]:
-        """Sample a number of Flower ClientProxy instances."""
+        """
+        Samples ClientProxy instances for a specific phase (training/validation/test).
+
+        Waits for minimum clients, loads pre-sampled nodes from pickle files, and returns corresponding clients. Ignores num_clients and criterion parameters.
+
+        Args:
+            num_clients (int): Number of clients to sample (unused).
+            phase (str): Phase for sampling ("training", "validation", or "test").
+            min_num_clients (int | None, optional): Minimum clients to wait for. Defaults to num_clients.
+            criterion (Criterion | None, optional): Sampling criterion (unused).
+
+        Returns:
+            list[ClientProxy]: List of sampled ClientProxy instances for the current round.
+
+        Raises:
+            IOError: If pickle file loading fails.
+        """
         # Block until at least num_clients are connected.
         if min_num_clients is None:
             min_num_clients = num_clients

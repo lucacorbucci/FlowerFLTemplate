@@ -23,6 +23,18 @@ from Utils.utils import get_params, seed_everything
 
 
 def signal_handler(sig: int, frame: Any) -> None:
+    """
+    Handles interrupt signals to gracefully terminate the experiment.
+
+    Finishes the Weights & Biases run if active and exits the program cleanly.
+
+    Args:
+        sig (int): The signal number received.
+        frame (Any): The current stack frame.
+
+    Returns:
+        None
+    """
     print("Gracefully stopping your experiment! Keep calm!")
     global wandb_run
     if wandb_run:
@@ -31,7 +43,20 @@ def signal_handler(sig: int, frame: Any) -> None:
 
 
 def client_fn(context: Context) -> Any:
-    """Returns a FlowerClient containing its data partition."""
+    """
+    Generates a Flower client instance with its assigned data partition.
+
+    Loads the partition based on the global partitioner and prepares data for the specified FL setting (cross-device or cross-silo).
+
+    Args:
+        context (Context): The Flower context with node configuration including partition ID.
+
+    Returns:
+        Any: A configured Flower client instance.
+
+    Raises:
+        KeyError: If "partition-id" is not found in node_config.
+    """
     partition_id = int(context.node_config["partition-id"])
     if partitioner:
         partition = partitioner.load_partition(partition_id)
@@ -45,6 +70,17 @@ def client_fn(context: Context) -> Any:
 
 
 def server_fn(context: Context) -> ServerAppComponents:
+    """
+    Constructs ServerAppComponents for running the Flower server simulation.
+
+    Initializes the global model, defines the FedAvg strategy with aggregation functions, and sets up the server with client manager and preferences.
+
+    Args:
+        context (Context): The Flower context.
+
+    Returns:
+        ServerAppComponents: Components including the server instance and configuration.
+    """
     # instantiate the model
     model = get_model(dataset=preferences.dataset_name)
     ndarrays = get_params(model)
@@ -103,6 +139,20 @@ def get_partitioner(preferences: Preferences) -> Any:
 
 
 def prepare_data(preferences: Preferences) -> Any:
+    """
+    Loads and prepares the dataset based on the specified name in preferences.
+
+    Supports datasets: "dutch", "mnist", "abalone", "income". Sets up scaler/encoder if applicable, creates partitioner, and optionally plots label distributions.
+
+    Args:
+        preferences (Preferences): User preferences containing dataset settings.
+
+    Returns:
+        Any: The partitioner instance for data partitioning, or None for "income" dataset.
+
+    Raises:
+        ValueError: If an unsupported dataset is specified or no training data is found.
+    """
     if preferences.dataset_name == "dutch":
         data_info = get_data_info(preferences)
         preferences.scaler = data_info.get("scaler", None)
@@ -150,6 +200,19 @@ def prepare_data(preferences: Preferences) -> Any:
 
 
 def setup_wandb(project_name: str, run_name: str | None) -> Any:
+    """
+    Initializes a Weights & Biases (wandb) run for experiment tracking.
+
+    Args:
+        project_name (str): The name of the wandb project.
+        run_name (str | None): The name of the specific run; uses default if None.
+
+    Returns:
+        Any: The initialized wandb run object.
+
+    Raises:
+        Exception: If wandb initialization fails due to configuration or network issues.
+    """
     return wandb.init(project=project_name, name=run_name) if run_name else wandb.init(project=project_name)
 
 

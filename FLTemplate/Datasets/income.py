@@ -13,13 +13,17 @@ from Utils.preferences import Preferences
 class IncomeDataset(Dataset):
     def __init__(self, x: np.ndarray, z: np.ndarray, y: np.ndarray) -> None:
         """
-        Initialize the custom dataset with x (features), z (sensitive values), and y (targets).
+        Initializes the IncomeDataset with features, sensitive attributes, and targets.
+
+        Stores samples, sensitive features, targets, and indexes for dataset access.
 
         Args:
-        x (list of tensors): List of input feature tensors.
-        z (list): List of sensitive values.
-        y (list): List of target values.
+            x (np.ndarray): Feature data array.
+            z (np.ndarray): Sensitive attribute data array.
+            y (np.ndarray): Target data array.
 
+        Returns:
+            None
         """
         self.samples = x
         self.sensitive_features = z
@@ -27,18 +31,28 @@ class IncomeDataset(Dataset):
         self.indexes = range(len(self.samples))
 
     def __len__(self) -> int:
+        """
+        Returns the number of samples in the dataset.
+
+        Args:
+            None
+
+        Returns:
+            int: Size of the dataset.
+        """
         return len(self.samples)
 
     def __getitem__(self, idx: int) -> tuple[Any, Any, Any]:
         """
-        Get a single data point from the dataset.
+        Retrieves a single sample from the dataset by index.
+
+        Returns feature, sensitive attribute, and target for the given index.
 
         Args:
-        idx (int): Index to retrieve the data point.
+            idx (int): Index of the sample to retrieve.
 
         Returns:
-        sample (dict): A dictionary containing 'x', 'z', and 'y'.
-
+            tuple[Any, Any, Any]: (feature sample, sensitive sample, target sample)
         """
         x_sample = self.samples[idx]
         z_sample = self.sensitive_features[idx]
@@ -53,6 +67,23 @@ def get_income_scaler(
     df: pd.DataFrame | None = None,
     validation_seed: int | None = None,
 ) -> tuple[StandardScaler, TargetEncoder]:
+    """
+    Computes and returns StandardScaler and TargetEncoder fitted on the Income dataset.
+
+    Validates input DataFrame and uses prepare_income to obtain preprocessors.
+
+    Args:
+        sweep (bool): Whether in hyperparameter sweep mode.
+        seed (int): Random seed for reproducibility.
+        df (pd.DataFrame | None): Income data DataFrame; required.
+        validation_seed (int | None): Seed for validation split.
+
+    Returns:
+        tuple[StandardScaler, TargetEncoder]: Fitted scaler and encoder instances.
+
+    Raises:
+        ValueError: If df is None or not a DataFrame.
+    """
     if df is None:
         error = "df cannot be None"
         raise ValueError(error)
@@ -71,6 +102,22 @@ def prepare_income(
     scaler: StandardScaler | None = None,
     encoder: TargetEncoder | None = None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, StandardScaler, TargetEncoder]:
+    """
+    Preprocesses Income DataFrame: encodes categoricals with TargetEncoder, scales continuous features with StandardScaler.
+
+    Drops target/sensitive columns, applies encoders/scalers if not provided.
+
+    Args:
+        df (pd.DataFrame): Input Income data.
+        scaler (StandardScaler | None): Pre-fitted scaler; if None, fits a new one.
+        encoder (TargetEncoder | None): Pre-fitted encoder; if None, fits a new one.
+
+    Returns:
+        tuple[np.ndarray, np.ndarray, np.ndarray, StandardScaler, TargetEncoder]: Features array, sensitive array, target array, scaler, encoder.
+
+    Raises:
+        ValueError: If DataFrame is invalid.
+    """
     # Separate features and target
 
     categorical_columns = ["COW", "SCHL", "RAC1P"]
@@ -103,6 +150,22 @@ def prepare_income(
 
 
 def prepare_income_for_cross_silo(preferences: Preferences, partition_id: int) -> Any:
+    """
+    Prepares Income data for cross-silo federated learning for a specific partition.
+
+    Loads train/test CSV files from partition directory, optionally splits train into train/val for sweep; processes with prepare_income, creates DataLoaders and FlowerClient.
+
+    Args:
+        preferences (Preferences): FL configuration including dataset_path, batch_size, seed, scaler, encoder.
+        partition_id (int): Client partition ID for loading specific files.
+
+    Returns:
+        Any: FlowerClient instance wrapped as .to_client().
+
+    Raises:
+        FileNotFoundError: If CSV files not found in partition directory.
+        ValueError: If data processing fails.
+    """
     path = f"{preferences.dataset_path}/{partition_id}/"
     for file in os.listdir(path):
         if file.endswith(".csv"):

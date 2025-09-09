@@ -7,18 +7,18 @@ def get_model(
     dataset: str,
 ) -> torch.nn.Module:
     """
-    This function returns the model to train.
+    Returns the appropriate PyTorch model instance based on the dataset name.
+
+    Supports "celeba" (CelebaNet), "dutch"/"income"/"adult" (LinearClassificationNet with specific input/output sizes), "mnist" (SimpleMNISTModel), "abalone" (AbaloneNet with default hidden sizes).
 
     Args:
-        dataset (str): the name of the dataset
-        device (torch.device): the device where the model will be trained
-
-    Raises:
-        ValueError: if the dataset is not supported
+        dataset (str): Name of the dataset to select the model for.
 
     Returns:
-        torch.nn.Module: the model to train
+        torch.nn.Module: Initialized model instance for the dataset.
 
+    Raises:
+        ValueError: If the dataset is not supported.
     """
     if dataset == "celeba":
         return CelebaNet()

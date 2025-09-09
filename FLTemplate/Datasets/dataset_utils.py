@@ -14,6 +14,20 @@ from Utils.preferences import Preferences
 
 
 def get_data_info(preferences: Preferences) -> dict[str, Any]:
+    """
+    Retrieves dataset-specific information including data type, target, sensitive attributes, and preprocessors (scaler/encoder).
+
+    Supports "dutch", "mnist", "abalone", "income" datasets; loads data if needed and computes scalers/encoders.
+
+    Args:
+        preferences (Preferences): Configuration containing dataset_name, dataset_path, sweep, seed, etc.
+
+    Returns:
+        dict[str, Any]: Dictionary with keys like "data_type", "target", "sensitive_attribute", "scaler", "encoder".
+
+    Raises:
+        ValueError: If unsupported dataset_name.
+    """
     match preferences.dataset_name:
         case "dutch":
             df = pd.read_csv(preferences.dataset_path)
@@ -65,6 +79,23 @@ def get_data_info(preferences: Preferences) -> dict[str, Any]:
 
 
 def prepare_data_for_cross_device(context: Context, partition: Any, preferences: Preferences, partition_id: int) -> Any:
+    """
+    Prepares data for cross-device federated learning from a partition.
+
+    Handles dataset-specific preparation (Dutch, MNIST, Abalone), creates DataLoader and FlowerClient; uses same loader for train/val.
+
+    Args:
+        context (Context): Flower context (unused).
+        partition (Any): Data partition for this client.
+        preferences (Preferences): FL configuration including dataset_name, batch_size, scaler.
+        partition_id (int): Client partition ID.
+
+    Returns:
+        Any: FlowerClient instance wrapped as .to_client().
+
+    Raises:
+        ValueError: If unsupported dataset_name.
+    """
     if preferences.dataset_name == "dutch":
         train = partition.to_pandas()
         x_train, z_train, y_train, _ = prepare_dutch(
@@ -100,6 +131,23 @@ def prepare_data_for_cross_device(context: Context, partition: Any, preferences:
 
 
 def prepare_data_for_cross_silo(context: Context, partition: Any, preferences: Preferences, partition_id: int) -> Any:
+    """
+    Prepares data for cross-silo federated learning by delegating to dataset-specific functions.
+
+    Supports "dutch", "mnist", "abalone", "income"; for income, partition unused.
+
+    Args:
+        context (Context): Flower context (unused).
+        partition (Any): Data partition for this client (unused for income).
+        preferences (Preferences): FL configuration including dataset_name.
+        partition_id (int): Client partition ID (passed to specific functions).
+
+    Returns:
+        Any: FlowerClient instance from specific preparation function.
+
+    Raises:
+        ValueError: If unsupported dataset_name.
+    """
     if preferences.dataset_name == "dutch":
         return prepare_dutch_for_cross_silo(preferences, partition, partition_id)
     if preferences.dataset_name == "mnist":

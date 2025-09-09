@@ -18,6 +18,20 @@ class FlowerClient(NumPyClient):
     def __init__(
         self, trainloader: DataLoader, valloader: DataLoader, preferences: Preferences, partition_id: int
     ) -> None:
+        """
+        Initializes a Flower client instance for federated learning.
+
+        Sets up data loaders, device, preferences, and model (SimpleModel for classification or RegressionModel for regression).
+
+        Args:
+            trainloader (DataLoader): DataLoader for training data.
+            valloader (DataLoader): DataLoader for validation data.
+            preferences (Preferences): Configuration preferences for the FL setup.
+            partition_id (int): Unique identifier for this client's data partition.
+
+        Returns:
+            None
+        """
         super().__init__()
 
         self.partition_id = partition_id
@@ -46,9 +60,19 @@ class FlowerClient(NumPyClient):
 
     def fit(self, parameters: NDArrays, config: dict[str, Scalar]) -> tuple[NDArrays, int, dict[str, Any]]:
         """
-        This method trains the model using the parameters sent by the
-        server on the dataset of this client. At then end, the parameters
-        of the locally trained model are communicated back to the server
+        Performs local training on the client's data using parameters received from the server.
+
+        Updates the local model parameters over the specified number of epochs and returns updated parameters along with training metrics.
+
+        Args:
+            parameters (NDArrays): Model parameters from the server.
+            config (dict[str, Scalar]): Configuration dictionary from the server.
+
+        Returns:
+            tuple[NDArrays, int, dict[str, Any]]: Updated model parameters, number of training examples, and training result dictionary (e.g., containing loss and accuracy).
+
+        Raises:
+            RuntimeError: If training fails due to device or model issues.
         """
         # copy parameters sent by the server into client's local model
         set_params(self.model.model, parameters)
@@ -62,8 +86,19 @@ class FlowerClient(NumPyClient):
 
     def evaluate(self, parameters: NDArrays, config: dict[str, Scalar]) -> tuple[float, int, dict[str, Any]]:
         """
-        Evaluate the model sent by the server on this client's
-        local validation set. Then return performance metrics.
+        Evaluates the model using parameters received from the server on the client's validation set.
+
+        Computes loss and other metrics (e.g., accuracy for classification, rmse/mae for regression).
+
+        Args:
+            parameters (NDArrays): Model parameters from the server.
+            config (dict[str, Scalar]): Configuration dictionary from the server.
+
+        Returns:
+            tuple[float, int, dict[str, Any]]: Evaluation loss, number of validation examples, and evaluation result dictionary with metrics.
+
+        Raises:
+            RuntimeError: If evaluation fails due to device or model issues.
         """
         set_params(self.model.model, parameters)
         result_dict = self.model.evaluate(testloader=self.valloader)

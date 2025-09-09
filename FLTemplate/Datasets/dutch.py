@@ -11,13 +11,17 @@ from Utils.preferences import Preferences
 class DutchDataset(Dataset):
     def __init__(self, x: np.ndarray, z: np.ndarray, y: np.ndarray) -> None:
         """
-        Initialize the custom dataset with x (features), z (sensitive values), and y (targets).
+        Initializes the DutchDataset with features, sensitive attributes, and targets.
+
+        Stores samples, sensitive features, targets, and indexes for dataset access.
 
         Args:
-        x (list of tensors): List of input feature tensors.
-        z (list): List of sensitive values.
-        y (list): List of target values.
+            x (np.ndarray): Feature data array.
+            z (np.ndarray): Sensitive attribute data array.
+            y (np.ndarray): Target data array.
 
+        Returns:
+            None
         """
         self.samples = x
         self.sensitive_features = z
@@ -25,18 +29,28 @@ class DutchDataset(Dataset):
         self.indexes = range(len(self.samples))
 
     def __len__(self) -> int:
+        """
+        Returns the number of samples in the dataset.
+
+        Args:
+            None
+
+        Returns:
+            int: Size of the dataset.
+        """
         return len(self.samples)
 
     def __getitem__(self, idx: int) -> tuple[Any, Any, Any]:
         """
-        Get a single data point from the dataset.
+        Retrieves a single sample from the dataset by index.
+
+        Returns feature, sensitive attribute, and target for the given index.
 
         Args:
-        idx (int): Index to retrieve the data point.
+            idx (int): Index of the sample to retrieve.
 
         Returns:
-        sample (dict): A dictionary containing 'x', 'z', and 'y'.
-
+            tuple[Any, Any, Any]: (feature sample, sensitive sample, target sample)
         """
         x_sample = self.samples[idx]
         z_sample = self.sensitive_features[idx]
@@ -51,6 +65,23 @@ def get_dutch_scaler(
     dutch_df: pd.DataFrame | None = None,
     validation_seed: int | None = None,
 ) -> MinMaxScaler:
+    """
+    Computes and returns a MinMaxScaler fitted on the Dutch dataset.
+
+    Validates input DataFrame and uses prepare_dutch to obtain the scaler.
+
+    Args:
+        sweep (bool): Whether in hyperparameter sweep mode.
+        seed (int): Random seed for reproducibility.
+        dutch_df (pd.DataFrame | None): Dutch data DataFrame; required.
+        validation_seed (int | None): Seed for validation split.
+
+    Returns:
+        MinMaxScaler: Fitted scaler instance.
+
+    Raises:
+        ValueError: If dutch_df is None.
+    """
     if dutch_df is None:
         raise ValueError("dutch_df cannot be None")
 
@@ -64,6 +95,21 @@ def prepare_dutch(
     dutch_df: pd.DataFrame,
     scaler: MinMaxScaler | None = None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, MinMaxScaler]:
+    """
+    Preprocesses Dutch DataFrame: handles missing values, binarizes sex/occupation, one-hot encodes categoricals, scales features.
+
+    Fills missing values with mode, creates binary targets/sensitive, applies MinMaxScaler if not provided.
+
+    Args:
+        dutch_df (pd.DataFrame): Input Dutch data.
+        scaler (MinMaxScaler | None): Pre-fitted scaler; if None, fits a new one.
+
+    Returns:
+        tuple[np.ndarray, np.ndarray, np.ndarray, MinMaxScaler]: Scaled features, sensitive array, target array, scaler.
+
+    Raises:
+        ValueError: If missing values persist after filling.
+    """
     # check the columns with missign values:
     missing_values_columns = dutch_df.columns[dutch_df.isna().any()].tolist()
     for column in missing_values_columns:
@@ -92,6 +138,22 @@ def prepare_dutch(
 
 
 def prepare_dutch_for_cross_silo(preferences: Preferences, partition: Any, partition_id: int) -> Any:
+    """
+    Prepares Dutch data for cross-silo federated learning from a partition.
+
+    Splits into train/test (20% test), optionally train/val for sweep; processes with prepare_dutch, creates DataLoaders and FlowerClient. Prints debug info for partition_id 0/1.
+
+    Args:
+        preferences (Preferences): FL configuration including batch_size, seed, scaler.
+        partition (Any): Data partition for this client.
+        partition_id (int): Client ID for debug printing.
+
+    Returns:
+        Any: FlowerClient instance wrapped as .to_client().
+
+    Raises:
+        ValueError: If data processing fails.
+    """
     partition_train_test = partition.train_test_split(test_size=0.2, seed=preferences.seed)
 
     test = partition_train_test["test"]

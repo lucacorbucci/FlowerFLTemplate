@@ -16,30 +16,43 @@ class ImageDataset(Dataset):
 
     def __init__(self, data: Any, transform: Any) -> None:
         """
-        Initialize the dataset.
+        Initializes the ImageDataset with data and optional transforms.
+
+        Stores the data and transform for image loading and preprocessing.
 
         Args:
-            data: List of dictionaries or dataset containing 'image', 'label', and 'sensitive_attribute'
-            transform: Optional transform to be applied to images
+            data (Any): Dataset or list containing images, labels, and sensitive attributes.
+            transform (Any): Optional transform to apply to images (e.g., ToTensor, Normalize).
 
+        Returns:
+            None
         """
         self.data = data
         self.transform = transform
 
     def __len__(self) -> int:
-        """Return the size of the dataset."""
+        """
+        Returns the number of samples in the dataset.
+
+        Args:
+            None
+
+        Returns:
+            int: Size of the dataset.
+        """
         return len(self.data)
 
     def __getitem__(self, idx: int) -> tuple[torch.Tensor, int, int]:
         """
-        Get a single item from the dataset.
+        Retrieves a single sample from the dataset by index.
+
+        Applies transform to image if provided; uses default sensitive_attribute=-1 if not present.
 
         Args:
-            idx: Index of the item to retrieve
+            idx (int): Index of the sample to retrieve.
 
         Returns:
-            Tuple containing (image, label, sensitive_attribute)
-
+            tuple[torch.Tensor, int, int]: (transformed image tensor, sensitive attribute, label)
         """
         # Get the example at the given index
         example = self.data[idx]
@@ -58,12 +71,18 @@ class ImageDataset(Dataset):
 
 def download_mnist(data_root: str = "../data/") -> Any:
     """
-    Downloads the MNIST dataset and saves the images as PNG files
-    into separate directories for each class (0-9).
+    Downloads MNIST dataset and saves images as PNG files in class subdirectories.
+
+    Combines train/test sets, creates ImageFolder-compatible structure under data_root/MNIST/train/.
 
     Args:
-        data_root (str): The directory to store the dataset.
+        data_root (str, optional): Directory to store the dataset. Defaults to "../data/".
 
+    Returns:
+        Any: The full concatenated PyTorch dataset.
+
+    Raises:
+        OSError: If directory creation or file saving fails.
     """
     print("Starting download of MNIST dataset...")
     # Download the training and testing datasets
@@ -105,6 +124,18 @@ def download_mnist(data_root: str = "../data/") -> Any:
 
 
 def prepare_mnist(partition: Any, preferences: Preferences) -> DataLoader:
+    """
+    Prepares MNIST partition data into an ImageDataset and DataLoader.
+
+    Applies ToTensor and Normalize transforms; shuffles for training.
+
+    Args:
+        partition (Any): MNIST data partition.
+        preferences (Preferences): Configuration including batch_size.
+
+    Returns:
+        DataLoader: Configured DataLoader for the partition.
+    """
     train = partition
 
     train_dataset = ImageDataset(
@@ -116,6 +147,22 @@ def prepare_mnist(partition: Any, preferences: Preferences) -> DataLoader:
 
 
 def prepare_mnist_for_cross_silo(preferences: Preferences, partition: Any, partition_id: int) -> Any:
+    """
+    Prepares MNIST data for cross-silo federated learning from a partition.
+
+    Splits into train/test (20% test), optionally train/val for sweep; uses prepare_mnist for loaders, creates FlowerClient.
+
+    Args:
+        preferences (Preferences): FL configuration including batch_size, seed.
+        partition (Any): Data partition for this client.
+        partition_id (int): Client partition ID (unused in implementation).
+
+    Returns:
+        Any: FlowerClient instance wrapped as .to_client().
+
+    Raises:
+        ValueError: If data splitting or processing fails.
+    """
     partition_train_test = partition.train_test_split(test_size=0.2, seed=preferences.seed)
     if preferences.sweep:
         print("[Preparing data for cross-silo for sweep...]")

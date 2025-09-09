@@ -7,6 +7,20 @@ from flwr.common.logger import log
 class Aggregation:
     @staticmethod
     def agg_metrics_test(metrics: list, server_round: int, wandb_run: Any) -> dict:
+        """
+        Aggregates test metrics from multiple clients using weighted averages.
+
+        Supports classification (accuracy, loss) and regression (rmse, mae, r2, mse, loss) metrics.
+        Logs aggregated values and updates wandb run if provided.
+
+        Args:
+            metrics (list): List of tuples (num_examples, metric_dict) from clients.
+            server_round (int): Current federated learning round.
+            wandb_run (Any): Weights & Biases run instance for logging.
+
+        Returns:
+            dict: Aggregated metrics dictionary with keys like "Test Loss", "Test_Accuracy" or regression equivalents, and "FL Round".
+        """
         total_examples = sum([n_examples for n_examples, _ in metrics])
 
         loss_test = sum([n_examples * metric["loss"] for n_examples, metric in metrics]) / total_examples
@@ -44,6 +58,20 @@ class Aggregation:
 
     @staticmethod
     def agg_metrics_evaluation(metrics: list, server_round: int, wandb_run: Any) -> dict:
+        """
+        Aggregates validation (evaluation) metrics from multiple clients using weighted averages.
+
+        Supports classification (accuracy, loss) and regression (rmse, mae, r2, mse, loss) metrics.
+        Logs aggregated values and updates wandb run if provided.
+
+        Args:
+            metrics (list): List of tuples (num_examples, metric_dict) from clients.
+            server_round (int): Current federated learning round.
+            wandb_run (Any): Weights & Biases run instance for logging.
+
+        Returns:
+            dict: Aggregated metrics dictionary with keys like "Validation Loss", "Validation_Accuracy" or regression equivalents, and "FL Round".
+        """
         total_examples = sum([n_examples for n_examples, _ in metrics])
         agg_metrics = {}
         loss_evaluation = sum([n_examples * metric["loss"] for n_examples, metric in metrics]) / total_examples
@@ -75,6 +103,21 @@ class Aggregation:
 
     @staticmethod
     def agg_metrics_train(metrics: list, server_round: int, fed_dir: Any, wandb_run: Any) -> dict:
+        """
+        Aggregates training metrics from multiple clients using weighted averages.
+
+        Handles loss always; accuracy if present in metrics. Logs aggregated values and updates wandb run if provided.
+        Note: fed_dir parameter is unused in the implementation.
+
+        Args:
+            metrics (list): List of tuples (num_examples, metric_dict) from clients.
+            server_round (int): Current federated learning round.
+            fed_dir (Any): Federated directory (unused).
+            wandb_run (Any): Weights & Biases run instance for logging.
+
+        Returns:
+            dict: Aggregated metrics dictionary with "Train Loss", optional "Train Accuracy", and "FL Round".
+        """
         # Collect the losses logged during each epoch in each client
         total_examples = sum([n_examples for n_examples, _ in metrics])
         losses = []

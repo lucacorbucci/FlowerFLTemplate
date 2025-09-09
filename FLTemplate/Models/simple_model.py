@@ -7,22 +7,27 @@ from Models.model import Model
 
 class SimpleModel(Model):
     """
-    A wrapper for PyTorch models that adds fairness-aware training and evaluation.
+    Concrete implementation of Model for classification tasks.
+
+    Handles training and evaluation with CrossEntropyLoss, computes accuracy.
     """
 
     def __init__(
         self, model: nn.Module, optimizer: torch.optim.Optimizer, criterion: nn.Module, device: torch.device
     ) -> None:
         """
-        Initialize the SimpleModel wrapper.
+        Initializes the SimpleModel wrapper for PyTorch models.
+
+        Moves model to device; optimizer and criterion are stored for training/evaluation.
 
         Args:
-            model (nn.Module): The PyTorch model to wrap
-            optimizer (torch.optim.Optimizer, optional): Optimizer for training. If None,
-                                                         Adam will be used with default params.
-            criterion (nn.Module): Loss function for training, default is cross entropy
-            device (torch.device): Device to use for computation (CPU/GPU)
+            model (nn.Module): The PyTorch model to wrap.
+            optimizer (torch.optim.Optimizer): Optimizer for training.
+            criterion (nn.Module): Loss function (e.g., CrossEntropyLoss).
+            device (torch.device): Compute device (CPU/GPU).
 
+        Returns:
+            None
         """
         self.model = model
         self.criterion = criterion
@@ -36,18 +41,19 @@ class SimpleModel(Model):
         epochs: int,
     ) -> dict[str, float]:
         """
-        Train the model with optional fairness regularization.
+        Trains the classification model on training data for specified epochs.
+
+        Uses CrossEntropyLoss, computes loss and accuracy; trains for 1 epoch (epochs param unused). Note: criterion overridden internally.
 
         Args:
-            train_loader (DataLoader): DataLoader for the training data
-            epochs (int): Number of epochs to train for
-            val_loader (DataLoader, optional): DataLoader for validation data
-            verbose (bool): Whether to print progress during training
-            average_probabilities (Dict, optional): Dictionary of probabilities for FL if not all sensitive attributes present
+            trainloader (DataLoader): DataLoader for training data with (sample, _, label) tuples.
+            epochs (int): Number of epochs (unused in current implementation).
 
         Returns:
-            Dict[str, List[float]]: Dictionary of metrics tracked during training
+            dict[str, float]: Dictionary with "loss": average training loss, "accuracy": training accuracy.
 
+        Raises:
+            RuntimeError: If training fails due to device or tensor issues.
         """
         # Initialize tracking metrics
         criterion = torch.nn.CrossEntropyLoss()
@@ -72,15 +78,18 @@ class SimpleModel(Model):
 
     def evaluate(self, testloader: DataLoader) -> dict[str, float]:
         """
-        Evaluate the model on a dataset.
+        Evaluates the classification model on test data, computing loss and accuracy.
+
+        No gradients; uses CrossEntropyLoss, computes accuracy over dataset. Note: criterion overridden internally.
 
         Args:
-            data_loader (DataLoader): DataLoader for evaluation
-            is_validation (bool): Whether this is a validation set
+            testloader (DataLoader): DataLoader for test data with (sample, _, label) tuples.
 
         Returns:
-            Dict[str, float]: Dictionary of evaluation metrics
+            dict[str, float]: Dictionary with "loss": average loss, "accuracy": test accuracy.
 
+        Raises:
+            RuntimeError: If evaluation fails due to device or tensor issues.
         """
         self.model.to(self.device)
         self.model.eval()

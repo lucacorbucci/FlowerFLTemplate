@@ -52,43 +52,30 @@ than or equal to the values of `min_fit_clients` and `min_evaluate_clients`.
 # pylint: disable=line-too-long
 class FedAvg(Strategy):
     """
-    Federated Averaging strategy.
+    Federated Averaging strategy implementation.
 
-    Implementation based on https://arxiv.org/abs/1602.05629
+    Based on McMahan et al. (2016). Supports client sampling for fit/evaluate/test, weighted aggregation of parameters and metrics, initial parameters, and custom config functions.
 
-    Parameters
-    ----------
-    fraction_fit : float, optional
-        Fraction of clients used during training. In case `min_fit_clients`
-        is larger than `fraction_fit * available_clients`, `min_fit_clients`
-        will still be sampled. Defaults to 1.0.
-    fraction_evaluate : float, optional
-        Fraction of clients used during validation. In case `min_evaluate_clients`
-        is larger than `fraction_evaluate * available_clients`,
-        `min_evaluate_clients` will still be sampled. Defaults to 1.0.
-    min_fit_clients : int, optional
-        Minimum number of clients used during training. Defaults to 2.
-    min_evaluate_clients : int, optional
-        Minimum number of clients used during validation. Defaults to 2.
-    min_available_clients : int, optional
-        Minimum number of total clients in the system. Defaults to 2.
-    evaluate_fn : Optional[Callable[[int, NDArrays, Dict[str, Scalar]],Optional[Tuple[float, Dict[str, Scalar]]]]]
-        Optional function used for validation. Defaults to None.
-    on_fit_config_fn : Callable[[int], Dict[str, Scalar]], optional
-        Function used to configure training. Defaults to None.
-    on_evaluate_config_fn : Callable[[int], Dict[str, Scalar]], optional
-        Function used to configure validation. Defaults to None.
-    accept_failures : bool, optional
-        Whether or not accept rounds containing failures. Defaults to True.
-    initial_parameters : Parameters, optional
-        Initial global model parameters.
-    fit_metrics_aggregation_fn : Optional[MetricsAggregationFn]
-        Metrics aggregation function, optional.
-    evaluate_metrics_aggregation_fn : Optional[MetricsAggregationFn]
-        Metrics aggregation function, optional.
-    inplace : bool (default: True)
-        Enable (True) or disable (False) in-place aggregation of model updates.
+    Args:
+        fraction_fit (float, optional): Fraction of clients for training. Defaults to 1.0.
+        fraction_evaluate (float, optional): Fraction of clients for evaluation. Defaults to 1.0.
+        min_fit_clients (int, optional): Minimum clients for training. Defaults to 2.
+        min_evaluate_clients (int, optional): Minimum clients for evaluation. Defaults to 2.
+        min_available_clients (int, optional): Minimum total clients. Defaults to 2.
+        preferences (Preferences): User preferences containing FL settings.
+        evaluate_fn (Callable, optional): Central evaluation function. Defaults to None.
+        on_fit_config_fn (Callable, optional): Config for training round. Defaults to None.
+        on_evaluate_config_fn (Callable, optional): Config for evaluation round. Defaults to None.
+        accept_failures (bool, optional): Accept rounds with failures. Defaults to True.
+        initial_parameters (Parameters, optional): Initial global parameters. Defaults to None.
+        fit_metrics_aggregation_fn (MetricsAggregationFn, optional): Aggregation for fit metrics. Defaults to None.
+        evaluate_metrics_aggregation_fn (MetricsAggregationFn, optional): Aggregation for evaluate metrics. Defaults to None.
+        test_metrics_aggregation_fn (MetricsAggregationFn, optional): Aggregation for test metrics. Defaults to None.
+        inplace (bool, optional): In-place aggregation. Defaults to True.
+        wandb_run (Any, optional): WandB run for logging. Defaults to None.
 
+    Returns:
+        None
     """
 
     # pylint: disable=too-many-arguments,too-many-instance-attributes, line-too-long
@@ -112,6 +99,35 @@ class FedAvg(Strategy):
         inplace: bool = True,
         wandb_run: Any = None,
     ) -> None:
+        """
+        Initializes the FedAvg strategy with sampling and aggregation parameters.
+
+        Validates min_available_clients; sets attributes for client sampling, config functions, aggregation, etc.
+
+        Args:
+            fraction_fit (float, optional): Fraction of clients for fit. Defaults to 1.0.
+            fraction_evaluate (float, optional): Fraction of clients for evaluate. Defaults to 1.0.
+            min_fit_clients (int, optional): Min clients for fit. Defaults to 2.
+            min_evaluate_clients (int, optional): Min clients for evaluate. Defaults to 2.
+            min_available_clients (int, optional): Min total clients. Defaults to 2.
+            preferences (Preferences): FL preferences.
+            evaluate_fn (Callable, optional): Central eval function. Defaults to None.
+            on_fit_config_fn (Callable, optional): Fit config fn. Defaults to None.
+            on_evaluate_config_fn (Callable, optional): Evaluate config fn. Defaults to None.
+            accept_failures (bool, optional): Accept failures. Defaults to True.
+            initial_parameters (Parameters, optional): Initial params. Defaults to None.
+            fit_metrics_aggregation_fn (MetricsAggregationFn, optional): Fit metrics agg fn. Defaults to None.
+            evaluate_metrics_aggregation_fn (MetricsAggregationFn, optional): Evaluate metrics agg fn. Defaults to None.
+            test_metrics_aggregation_fn (MetricsAggregationFn, optional): Test metrics agg fn. Defaults to None.
+            inplace (bool, optional): In-place agg. Defaults to True.
+            wandb_run (Any, optional): WandB run. Defaults to None.
+
+        Returns:
+            None
+
+        Raises:
+            ValueError: If min_available_clients too low (logged as warning).
+        """
         super().__init__()
 
         if min_fit_clients > min_available_clients or min_evaluate_clients > min_available_clients:
@@ -135,28 +151,77 @@ class FedAvg(Strategy):
         self.fed_dir = preferences.fed_dir
 
     def __repr__(self) -> str:
-        """Compute a string representation of the strategy."""
+        """
+        Returns a string representation of the FedAvg strategy.
+
+        Args:
+            None
+
+        Returns:
+            str: Representation including accept_failures flag.
+        """
         rep = f"FedAvg(accept_failures={self.accept_failures})"
         return rep
 
     def num_fit_clients(self, num_available_clients: int) -> tuple[int, int]:
-        """Return the sample size and the required number of available clients."""
+        """
+        Computes the number of clients to sample for fit and the min available required.
+
+        Uses fraction_fit, ensures at least min_fit_clients.
+
+        Args:
+            num_available_clients (int): Total available clients.
+
+        Returns:
+            tuple[int, int]: (sample_size, min_available_clients)
+        """
         num_clients = int(num_available_clients * self.fraction_fit)
         return max(num_clients, self.min_fit_clients), self.min_available_clients
 
     def num_evaluation_clients(self, num_available_clients: int) -> tuple[int, int]:
-        """Use a fraction of available clients for evaluation."""
+        """
+        Computes the number of clients to sample for evaluation and the min available required.
+
+        Uses fraction_evaluate, ensures at least min_evaluate_clients.
+
+        Args:
+            num_available_clients (int): Total available clients.
+
+        Returns:
+            tuple[int, int]: (sample_size, min_available_clients)
+        """
         num_clients = int(num_available_clients * self.fraction_evaluate)
         return max(num_clients, self.min_evaluate_clients), self.min_available_clients
 
     def initialize_parameters(self, client_manager: SimpleClientManager) -> Parameters | None:
-        """Initialize global model parameters."""
+        """
+        Initializes global model parameters using provided initial_parameters or strategy default.
+
+        Clears initial_parameters from memory after use.
+
+        Args:
+            client_manager (SimpleClientManager): Client manager (unused in this implementation).
+
+        Returns:
+            Parameters | None: Initial global parameters.
+        """
         initial_parameters = self.initial_parameters
         self.initial_parameters = None  # Don't keep initial parameters in memory
         return initial_parameters
 
     def evaluate(self, server_round: int, parameters: Parameters) -> tuple[float, dict[str, Scalar]] | None:
-        """Evaluate model parameters using an evaluation function."""
+        """
+        Performs central evaluation using the provided evaluate_fn.
+
+        Converts parameters to NDArrays, calls evaluate_fn if available.
+
+        Args:
+            server_round (int): Current server round.
+            parameters (Parameters): Global model parameters.
+
+        Returns:
+            tuple[float, dict[str, Scalar]] | None: (loss, metrics) or None if no evaluate_fn.
+        """
         if self.evaluate_fn is None:
             # No evaluation function provided
             return None
@@ -170,7 +235,22 @@ class FedAvg(Strategy):
     def configure_fit(
         self, server_round: int, parameters: Parameters, client_manager: SimpleClientManager
     ) -> list[tuple[ClientProxy, FitIns]]:
-        """Configure the next round of training."""
+        """
+        Configures the fit instructions for the next training round.
+
+        Generates config if on_fit_config_fn provided, samples clients using num_fit_clients, creates FitIns.
+
+        Args:
+            server_round (int): Current server round.
+            parameters (Parameters): Global parameters to send to clients.
+            client_manager (SimpleClientManager): Manager to sample clients from.
+
+        Returns:
+            list[tuple[ClientProxy, FitIns]]: List of (client, fit instructions) pairs.
+
+        Raises:
+            ValueError: If no clients can be sampled.
+        """
         config = {}
         if self.on_fit_config_fn is not None:
             # Custom fit config function provided
@@ -191,7 +271,22 @@ class FedAvg(Strategy):
     def configure_evaluate(
         self, server_round: int, parameters: Parameters, client_manager: SimpleClientManager
     ) -> list[tuple[ClientProxy, EvaluateIns]]:
-        """Configure the next round of evaluation."""
+        """
+        Configures the evaluate instructions for the next validation round.
+
+        Skips if fraction_evaluate is 0; generates config if on_evaluate_config_fn provided, samples clients using num_evaluation_clients for validation phase.
+
+        Args:
+            server_round (int): Current server round.
+            parameters (Parameters): Global parameters to send to clients.
+            client_manager (SimpleClientManager): Manager to sample clients from.
+
+        Returns:
+            list[tuple[ClientProxy, EvaluateIns]]: List of (client, evaluate instructions) pairs.
+
+        Raises:
+            ValueError: If no clients can be sampled.
+        """
         # Do not configure federated evaluation if fraction eval is 0.
         if self.fraction_evaluate == 0.0:
             return []
@@ -217,7 +312,22 @@ class FedAvg(Strategy):
     def configure_test(
         self, server_round: int, parameters: Parameters, client_manager: SimpleClientManager
     ) -> list[tuple[ClientProxy, EvaluateIns]]:
-        """Configure the next round of evaluation."""
+        """
+        Configures the test instructions for the next test round.
+
+        Skips if fraction_evaluate is 0; generates config if on_evaluate_config_fn provided, samples clients using num_evaluation_clients for test phase.
+
+        Args:
+            server_round (int): Current server round.
+            parameters (Parameters): Global parameters to send to clients.
+            client_manager (SimpleClientManager): Manager to sample clients from.
+
+        Returns:
+            list[tuple[ClientProxy, EvaluateIns]]: List of (client, test instructions) pairs.
+
+        Raises:
+            ValueError: If no clients can be sampled.
+        """
         # Do not configure federated evaluation if fraction eval is 0.
         if self.fraction_evaluate == 0.0:
             return []
@@ -246,7 +356,22 @@ class FedAvg(Strategy):
         results: list[tuple[ClientProxy, FitRes]],
         failures: list[tuple[ClientProxy, FitRes] | BaseException],
     ) -> tuple[Parameters | None, dict[str, Scalar]]:
-        """Aggregate fit results using weighted average."""
+        """
+        Aggregates fit results: weighted average of parameters, custom metrics if fn provided.
+
+        Uses aggregate_inplace if inplace=True; skips if no results or unacceptable failures.
+
+        Args:
+            server_round (int): Current server round.
+            results (list[tuple[ClientProxy, FitRes]]): Successful fit results.
+            failures (list[tuple[ClientProxy, FitRes] | BaseException]): Failures.
+
+        Returns:
+            tuple[Parameters | None, dict[str, Scalar]]: Aggregated parameters and metrics.
+
+        Raises:
+            ValueError: If aggregation fails.
+        """
         if not results:
             return None, {}
         # Do not aggregate if there are failures and failures are not accepted
@@ -286,7 +411,22 @@ class FedAvg(Strategy):
         results: list[tuple[ClientProxy, EvaluateRes]],
         failures: list[tuple[ClientProxy, EvaluateRes] | BaseException],
     ) -> tuple[float | None, dict[str, Scalar]]:
-        """Aggregate evaluation losses using weighted average."""
+        """
+        Aggregates evaluate results: weighted average loss, custom metrics if fn provided.
+
+        Skips if no results or unacceptable failures.
+
+        Args:
+            server_round (int): Current server round.
+            results (list[tuple[ClientProxy, EvaluateRes]]): Successful evaluate results.
+            failures (list[tuple[ClientProxy, EvaluateRes] | BaseException]): Failures.
+
+        Returns:
+            tuple[float | None, dict[str, Scalar]]: Aggregated loss and metrics.
+
+        Raises:
+            ValueError: If aggregation fails.
+        """
         if not results:
             return None, {}
         # Do not aggregate if there are failures and failures are not accepted
@@ -316,7 +456,22 @@ class FedAvg(Strategy):
         results: list[tuple[ClientProxy, EvaluateRes]],
         failures: list[tuple[ClientProxy, EvaluateRes] | BaseException],
     ) -> tuple[float | None, dict[str, Scalar]]:
-        """Aggregate  losses using weighted average."""
+        """
+        Aggregates test results: weighted average loss, custom metrics if fn provided.
+
+        Skips if no results or unacceptable failures.
+
+        Args:
+            server_round (int): Current server round.
+            results (list[tuple[ClientProxy, EvaluateRes]]): Successful test results.
+            failures (list[tuple[ClientProxy, EvaluateRes] | BaseException]): Failures.
+
+        Returns:
+            tuple[float | None, dict[str, Scalar]]: Aggregated loss and metrics.
+
+        Raises:
+            ValueError: If aggregation fails.
+        """
         if not results:
             return None, {}
         # Do not aggregate if there are failures and failures are not accepted
