@@ -224,7 +224,7 @@ class SimpleClientManager(ClientManager):
                 print("Validation nodes: ", self.validation_clients_list)
                 print("Test nodes: ", self.test_clients_list)
             else:
-                
+
 
                 print("Clients list: ", self.clients_list)
                 # In this case I'm in the cross-silo case
