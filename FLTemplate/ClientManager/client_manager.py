@@ -140,6 +140,11 @@ class SimpleClientManager(ClientManager):
         if client.cid in self.clients:
             return False
 
+        new_random_cid = str(random.randint(0, 2**63 - 1))
+        while new_random_cid in self.clients:
+            new_random_cid = str(random.randint(0, 2**63 - 1))
+        client.cid = new_random_cid
+
         self.clients[client.cid] = client
         self.clients_list.append(client.cid)
 
@@ -152,14 +157,12 @@ class SimpleClientManager(ClientManager):
                 # so that we have a training set of clients, a validation set of clients and
                 # a test set of clients.
                 self.validation_clients_list = None
-                random.seed(self.preferences.seed)
                 self.clients_list = [
                     str(client_id) for client_id in sorted([int(client_id) for client_id in self.clients_list])
                 ]
                 print("Clients list: ", self.clients_list)
 
                 # sample the test clients from the self.clients_list
-                random.shuffle(self.clients_list)
                 self.test_clients_list = self.clients_list[: self.preferences.num_test_nodes]
                 print("Nodes to sample: ", self.preferences.sampled_test_nodes_per_round)
                 sampled_nodes_test = self.sample_clients_per_round(
@@ -215,18 +218,21 @@ class SimpleClientManager(ClientManager):
                 with open(f"{self.preferences.fed_dir}/counter_sampling.pkl", "wb") as f:
                     dill.dump(counter_sampling, f)
 
+                random.seed(self.preferences.seed)
+
                 print("Train nodes: ", self.training_clients_list)
                 print("Validation nodes: ", self.validation_clients_list)
                 print("Test nodes: ", self.test_clients_list)
             else:
-                random.seed(self.preferences.node_shuffle_seed)
-                random.shuffle(self.clients_list)
+                
 
                 print("Clients list: ", self.clients_list)
                 # In this case I'm in the cross-silo case
                 # This means that each node has training, validation and test data
                 # so each node could be used for training, validation and testing
                 if self.preferences.sampled_validation_nodes_per_round:
+                    random.seed(self.preferences.node_shuffle_seed)
+                    random.shuffle(self.clients_list)
                     print("Sampling validation nodes per round: ", self.preferences.sampled_validation_nodes_per_round)
                     sampled_nodes_validation = self.pre_sample_clients(
                         fraction=self.preferences.sampled_validation_nodes_per_round,
@@ -234,8 +240,8 @@ class SimpleClientManager(ClientManager):
                     )
                     with open(f"{self.preferences.fed_dir}/validation_nodes_per_round.pkl", "wb") as f:
                         dill.dump(sampled_nodes_validation, f)
-
                         print("Validation nodes: ", sampled_nodes_validation)
+                    random.seed(self.preferences.seed)
                 else:
                     print("No validation nodes sampled, using all clients for training and testing.")
 
@@ -267,7 +273,6 @@ class SimpleClientManager(ClientManager):
                 with open(f"{self.preferences.fed_dir}/counter_sampling.pkl", "wb") as f:
                     dill.dump(counter_sampling, f)
 
-                random.seed(self.preferences.seed)
                 self.test_clients_list = self.clients_list
                 self.training_clients_list = self.clients_list
                 self.validation_clients_list = self.clients_list

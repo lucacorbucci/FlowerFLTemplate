@@ -68,7 +68,7 @@ def prepare_abalone(
 
 
 def prepare_abalone_for_cross_silo(preferences: Preferences, partition: Any, partition_id: int) -> Any:
-    partition_train_test = partition.train_test_split(test_size=0.2, seed=42)
+    partition_train_test = partition.train_test_split(test_size=0.2, seed=preferences.seed)
     if preferences.sweep:
         print("[Preparing data for cross-silo for sweep...]")
 

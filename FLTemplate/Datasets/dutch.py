@@ -92,7 +92,18 @@ def prepare_dutch(
 
 
 def prepare_dutch_for_cross_silo(preferences: Preferences, partition: Any, partition_id: int) -> Any:
-    partition_train_test = partition.train_test_split(test_size=0.2, seed=42)
+    partition_train_test = partition.train_test_split(test_size=0.2, seed=preferences.seed)
+
+    test = partition_train_test["test"]
+    if partition_id == 0:
+        print(f"partition Id {partition_id} - Test set size: {len(test)}")
+        print(f"Test set columns: {test.column_names}")
+        print(f"Test set example:\n{test[0]}")
+    elif partition_id == 1:
+        print(f"partition Id {partition_id} - Test set size: {len(test)}")
+        print(f"Test set columns: {test.column_names}")
+        print(f"Test set example:\n{test[0]}")
+    
     if preferences.sweep:
         print("[Preparing data for cross-silo for sweep...]")
 

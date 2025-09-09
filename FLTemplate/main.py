@@ -1,6 +1,7 @@
 import argparse
 import signal
 import sys
+import time
 from typing import Any
 
 import wandb
@@ -18,7 +19,7 @@ from Models.utils import get_model
 from Server.server import Server
 from Strategy.fed_avg import FedAvg
 from Utils.preferences import Preferences
-from Utils.utils import get_params
+from Utils.utils import get_params, seed_everything
 
 
 def signal_handler(sig: int, frame: Any) -> None:
@@ -149,7 +150,7 @@ parser.add_argument("--sampled_validation_nodes_per_round", type=float, default=
 parser.add_argument("--sampled_train_nodes_per_round", type=float, default=None)
 parser.add_argument("--sampled_test_nodes_per_round", type=float, default=None)
 parser.add_argument("--num_epochs", type=int, default=None)
-parser.add_argument("--seed", type=int, default=None)
+parser.add_argument("--seed", type=int, default=42)
 parser.add_argument("--node_shuffle_seed", type=int, default=None)
 parser.add_argument("--fed_dir", type=str, default=None, required=True)
 parser.add_argument("--FL_setting", type=str, default=None, required=True)
@@ -175,6 +176,11 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal_handler)
     # remove files in tmp/ray
     args = parser.parse_args()
+
+    if args.node_shuffle_seed is None:
+        node_shuffle_seed = int(str(time.time()).split(".")[1]) * args.seed
+        args.node_shuffle_seed = node_shuffle_seed
+    seed_everything(args.seed)
 
     num_clients = args.num_clients
     num_rounds = args.num_rounds
@@ -233,3 +239,5 @@ if __name__ == "__main__":
 
     if wandb_run:
         wandb_run.finish()
+
+

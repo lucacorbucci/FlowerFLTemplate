@@ -1,5 +1,8 @@
+import os
+import random
 from collections import OrderedDict
 
+import numpy as np
 import torch
 from flwr.common import NDArrays
 from Utils.preferences import Preferences
@@ -31,3 +34,13 @@ def get_optimizer(model: torch.nn.Module, preferences: Preferences) -> torch.opt
             )
         case _:
             raise ValueError(f"Unsupported optimizer: {preferences.optimizer}")
+
+def seed_everything(seed: int) -> None:
+    torch.manual_seed(seed)
+    random.seed(seed)
+    np.random.seed(seed)
+    os.environ["PYTHONHASHSEED"] = str(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+        torch.cuda.manual_seed(seed)
+        torch.backends.cudnn.deterministic = True

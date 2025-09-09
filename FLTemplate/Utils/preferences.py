@@ -17,7 +17,7 @@ class Preferences:
     sampled_training_nodes_per_round: int | None = None
     sampled_test_nodes_per_round: int | None = None
     seed: int = 42
-    node_shuffle_seed: int = 11
+    node_shuffle_seed: int | None = None
     fed_dir: str | None = None
     fl_setting: str | None = None
     dataset_path: str | None = None
