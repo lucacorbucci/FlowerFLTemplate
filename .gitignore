@@ -1,4 +1,5 @@
-data/
+MNIST/
+celeba/
 wandb/
 .env/
 __pycache__/
@@ -6,7 +7,6 @@ __pycache__/
 *$py.class
 *.pkl
 *.png
-*.csv
 analysis_DPL.py
 logs/
 *.tar.gz
