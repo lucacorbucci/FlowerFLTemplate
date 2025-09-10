@@ -170,6 +170,9 @@ def prepare_data(preferences: Preferences) -> Any:
         preferences.encoder = data_info.get("encoder", None)
         partitioner = None
         return partitioner
+    elif preferences.dataset_name == "celeba":
+        data_info = get_data_info(preferences)
+        dataset_dict = load_dataset("csv", data_files=preferences.dataset_path)
     else:
         error = f"Unsupported dataset: {preferences.dataset_name}"
         raise ValueError(error)
