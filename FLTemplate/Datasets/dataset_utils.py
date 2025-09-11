@@ -5,9 +5,9 @@ import numpy as np
 import pandas as pd
 from Client.client import FlowerClient
 from Datasets.abalone import AbaloneDataset, get_abalone_scaler, prepare_abalone, prepare_abalone_for_cross_silo
-from Datasets.celeba import prepare_celeba_for_cross_silo
+from Datasets.celeba import prepare_celeba, prepare_celeba_for_cross_silo
 from Datasets.dutch import DutchDataset, get_dutch_scaler, prepare_dutch, prepare_dutch_for_cross_silo
-from Datasets.income import get_income_scaler, prepare_celeba_for_cross_device, prepare_income_for_cross_silo
+from Datasets.income import get_income_scaler, prepare_income_for_cross_silo
 from Datasets.mnist import download_mnist, prepare_mnist, prepare_mnist_for_cross_silo
 from flwr.common import Context
 from torch.utils.data import DataLoader
@@ -124,7 +124,8 @@ def prepare_data_for_cross_device(context: Context, partition: Any, preferences:
         )
         trainloader = DataLoader(train_dataset, batch_size=preferences.batch_size, shuffle=True)
     elif preferences.dataset_name == "celeba":
-        trainloader = prepare_celeba_for_cross_device(preferences, partition, partition_id)
+        train = partition.to_pandas()
+        trainloader = prepare_celeba(train, preferences)
     else:
         raise ValueError(f"Unsupported dataset: {preferences.dataset_name}")
 
@@ -161,6 +162,6 @@ def prepare_data_for_cross_silo(context: Context, partition: Any, preferences: P
     if preferences.dataset_name == "income":
         return prepare_income_for_cross_silo(preferences, partition_id)
     if preferences.dataset_name == "celeba":
-        return prepare_celeba_for_cross_silo(preferences, partition_id)
+        return prepare_celeba_for_cross_silo(preferences, partition, partition_id)
 
     raise ValueError(f"Unsupported dataset: {preferences.dataset_name}")

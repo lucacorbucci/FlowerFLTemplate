@@ -1,3 +1,4 @@
+import os
 import random
 import threading
 
@@ -99,9 +100,12 @@ class SimpleClientManager(ClientManager):
                 start = 0
                 end = len(client_list)
             else:
+                # 9*15 % 150
                 start = fl_round * nodes_to_sample % len(client_list)
+                # (9*15 + 15) % 150
                 end = (fl_round * nodes_to_sample + nodes_to_sample) % len(client_list)
-
+            if end == 0:
+                end = len(client_list)
             sampled_nodes[fl_round] = client_list[start:end]
         return sampled_nodes
 
@@ -351,9 +355,12 @@ class SimpleClientManager(ClientManager):
             IOError: If pickle file loading fails.
         """
         # Block until at least num_clients are connected.
-        if min_num_clients is None:
-            min_num_clients = num_clients
-        self.wait_for(min_num_clients)
+        self.wait_for(num_clients)
+
+        # wait until the file train_nodes_per_round.pkl is stored on disk
+        while not os.path.exists(f"{self.preferences.fed_dir}/train_nodes_per_round.pkl"):
+            pass
+
         # Sample clients which meet the criterion
 
         if phase == "training":

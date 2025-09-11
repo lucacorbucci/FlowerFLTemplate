@@ -40,3 +40,5 @@ class Preferences:
     lr: float = 0.01
     optimizer: str = "adam"
     momentum: float = 0.9
+
+    image_path : str | None = None

@@ -1,4 +1,6 @@
 import argparse
+import os
+import shutil
 import signal
 import sys
 import time
@@ -250,6 +252,7 @@ parser.add_argument("--optimizer", type=str, default="adam")
 parser.add_argument("--momentum", type=float, default=0.9)
 parser.add_argument("--weight_decay", type=float, default=1e-5)
 
+parser.add_argument("--image_path", type=str, default=None)
 
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal_handler)
@@ -292,7 +295,16 @@ if __name__ == "__main__":
         optimizer=args.optimizer,
         momentum=args.momentum,
         task=args.task,
+        image_path=args.image_path,
     )
+
+    # remove the files in the path args.fed_dir
+    for item in os.listdir(args.fed_dir):
+        item_path = os.path.join(args.fed_dir, item)
+        if os.path.isfile(item_path) or os.path.islink(item_path):
+            os.remove(item_path)  # remove file or symlink
+        elif os.path.isdir(item_path):
+            shutil.rmtree(item_path)  # remove directory
 
     wandb_run = (
         setup_wandb(
@@ -318,5 +330,3 @@ if __name__ == "__main__":
 
     if wandb_run:
         wandb_run.finish()
-
-
