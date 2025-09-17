@@ -101,6 +101,30 @@ FLTemplate/
 
 Data is partitioned per client, with train/test splits.
 
+### How to add a new Dataset
+
+# TODO
+
+If you already have the dataset on you machine, you can add it by following these steps:
+
+- In the main.py file you have to add the new dataset to the prepare_data function. 
+
+```python
+    elif preferences.dataset_name == "speech_fairness":
+        data_info = get_data_info(preferences)
+        dataset_dict = load_dataset("csv", data_files=preferences.dataset_path)
+```
+
+This holds in the case of a csv dataset, for images for instance you can use
+
+```python
+    elif preferences.dataset_name == "your_dataset_name":
+        data_info = get_data_info(preferences)
+        dataset_dict = load_dataset("imagefolder", data_dir=preferences.dataset_path)
+```
+
+
+
 ## Running Experiments
 
 1. Prepare data (for MNIST, run download in mnist.py if needed).
