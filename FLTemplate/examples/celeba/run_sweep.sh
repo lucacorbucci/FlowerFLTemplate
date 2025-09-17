@@ -19,6 +19,6 @@ run_sweep_and_agent () {
 }
 
 run_sweep_and_agent "celeba_cross_device_iid"
-run_sweep_and_agent "celeba_cross_device_NON_iid"
 run_sweep_and_agent "celeba_cross_silo_NON_iid"
 run_sweep_and_agent "celeba_cross_silo_iid"
+run_sweep_and_agent "celeba_cross_device_NON_iid"
