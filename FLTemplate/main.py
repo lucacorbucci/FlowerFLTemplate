@@ -176,7 +176,7 @@ def prepare_data(preferences: Preferences) -> Any:
         data_info = get_data_info(preferences)
         dataset_dict = load_dataset("csv", data_files=preferences.dataset_path)
     # elif preferences.dataset_name == "speech_fairness":
-        
+
     else:
         error = f"Unsupported dataset: {preferences.dataset_name}"
         raise ValueError(error)
