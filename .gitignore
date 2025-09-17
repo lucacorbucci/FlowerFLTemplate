@@ -22,3 +22,5 @@ elia/
 old_fltemplate/
 training_data/
 *.txt
+speech_fairness/
+fair_speech/
