@@ -1,4 +1,0 @@
-wandb: Creating sweep from: dutch_cross_silo_NON_iid.yaml
-wandb: Creating sweep with ID: det1ay4k
-wandb: View sweep at: https://wandb.ai/lucacorbucci/TestTemplateFL/sweeps/det1ay4k
-wandb: Run sweep agent with: wandb agent lucacorbucci/TestTemplateFL/det1ay4k

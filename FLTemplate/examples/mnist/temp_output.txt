@@ -1,4 +1,0 @@
-wandb: Creating sweep from: mnist_cross_silo_iid.yaml
-wandb: Creating sweep with ID: 8pxl0thu
-wandb: View sweep at: https://wandb.ai/lucacorbucci/TestTemplateFL/sweeps/8pxl0thu
-wandb: Run sweep agent with: wandb agent lucacorbucci/TestTemplateFL/8pxl0thu

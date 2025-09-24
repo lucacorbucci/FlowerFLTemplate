@@ -249,7 +249,7 @@ parser.add_argument("--fed_dir", type=str, default=None, required=True)
 parser.add_argument("--dataset_path", type=str, default=None)
 parser.add_argument("--sweep", type=bool, default=False)
 parser.add_argument("--wandb", type=bool, default=True)
-parser.add_argument("--project_name", type=str, default="FLTemplate")
+parser.add_argument("--project_name", type=str, default="FlowerFLTemplate")
 parser.add_argument("--run_name", type=str, default=None)
 
 parser.add_argument("--task", type=str, default="classification")

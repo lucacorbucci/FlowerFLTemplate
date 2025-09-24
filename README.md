@@ -1,6 +1,6 @@
-# FLTemplate
+# FlowerFLTemplate
 
-FLTemplate is a flexible federated learning framework built on top of [Flower](https://flower.ai/) (FLwr). It enables simulation of federated learning experiments in both cross-device and cross-silo settings, supporting IID and non-IID data partitioning (using Dirichlet distribution). The framework is designed for ease of use, with support for various datasets, classification and regression tasks, and integration with Weights & Biases (WandB) for experiment tracking and hyperparameter sweeps.
+FlowerFLTemplate is a flexible federated learning framework built on top of [Flower](https://flower.ai/) (FLwr). It enables simulation of federated learning experiments in both cross-device and cross-silo settings, supporting IID and non-IID data partitioning (using Dirichlet distribution). The framework is designed for ease of use, with support for various datasets, classification and regression tasks, and integration with Weights & Biases (WandB) for experiment tracking and hyperparameter sweeps.
 
 ## Features
 
@@ -43,8 +43,8 @@ Fore more details, visit the [uv documentation](https://docs.astral.sh/uv/gettin
 If you want to try out a simple simulation with default settings, you can run:
 
 ```bash
-cd /FLTemplate/examples/dutch/
-uv run python /home/lcorbucci/FLTemplate/FLTemplate/examples/dutch/../../main.py --batch_size=51 --lr=0.027523254839401178 --momentum=0.037879525096583266 --num_epochs=3 --optimizer=adam --weight_decay=0.0009210304960670968 --dataset_name dutch --num_rounds 10 --num_clients 20 --FL_setting cross_device --sampled_train_nodes_per_round 1 --sampled_validation_nodes_per_round 1 --sampled_test_nodes_per_round 0 --fed_dir ../../../training_data/dutch/ --project_name TestTemplateFL --run_name Test --wandb True --dataset_path ../../../data/dutch/dutch.csv --partitioner_type non_iid --partitioner_alpha 1 --partitioner_by occupation --num_train_nodes 12 --num_validation_nodes 4 --num_test_nodes 4 --sweep True
+cd /FlowerFLTemplate/examples/dutch/
+uv run python /home/lcorbucci/FlowerFLTemplate/FlowerFLTemplate/examples/dutch/../../main.py --batch_size=51 --lr=0.027523254839401178 --momentum=0.037879525096583266 --num_epochs=3 --optimizer=adam --weight_decay=0.0009210304960670968 --dataset_name dutch --num_rounds 10 --num_clients 20 --FL_setting cross_device --sampled_train_nodes_per_round 1 --sampled_validation_nodes_per_round 1 --sampled_test_nodes_per_round 0 --fed_dir ../../../training_data/dutch/ --project_name TestTemplateFL --run_name Test --wandb True --dataset_path ../../../data/dutch/dutch.csv --partitioner_type non_iid --partitioner_alpha 1 --partitioner_by occupation --num_train_nodes 12 --num_validation_nodes 4 --num_test_nodes 4 --sweep True
 ```
 
 This will run a federated learning simulation on the Dutch dataset with specified hyperparameters.
