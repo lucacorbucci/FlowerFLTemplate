@@ -1,6 +1,7 @@
 import os
 import random
 import threading
+import time
 
 import dill
 from flwr.server.client_manager import ClientManager
@@ -358,8 +359,30 @@ class SimpleClientManager(ClientManager):
         self.wait_for(num_clients)
 
         # wait until the file train_nodes_per_round.pkl is stored on disk
-        while not os.path.exists(f"{self.preferences.fed_dir}/train_nodes_per_round.pkl"):
-            pass
+
+        def wait_file(file_path: str) -> None:
+            """
+            Waits until the specified file exists and is non-empty.
+
+            Args:
+                file_path (str): Path to the file to wait for.
+
+            Returns:
+                None
+            """
+            while True:
+                if os.path.exists(file_path):
+                    try:
+                        if os.path.getsize(file_path) > 0:
+                            break  # file exists and is non-empty
+                    except OSError:
+                        # file might be created but not fully ready yet
+                        pass
+                time.sleep(0.1)
+
+        wait_file(f"{self.preferences.fed_dir}/train_nodes_per_round.pkl")
+        wait_file(f"{self.preferences.fed_dir}/validation_nodes_per_round.pkl")
+        wait_file(f"{self.preferences.fed_dir}/test_nodes_per_round.pkl")
 
         # Sample clients which meet the criterion
 
